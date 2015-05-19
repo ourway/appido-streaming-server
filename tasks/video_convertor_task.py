@@ -52,7 +52,7 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                          'utils', 'mp4-dash-encode.py'), '-v', '-b', str(bw_count), '-m',
            str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    print(' '.join(cmd))
+    print((' '.join(cmd)))
     p = subprocess.Popen(cmd, shell=False, stdin=PIPE, stdout=PIPE,
                          stderr=PIPE, close_fds=True)
 
@@ -120,7 +120,7 @@ def create_segments(src):
         for c in comments:
             p = c.getparent()
             p.remove(c)
-        f = open(out_dir + '/' + mpd_file, 'w')
+        f = open(out_dir + '/' + mpd_file, 'wb')
         f.write(etree.tostring(tree))
         f.close()
         hls_segments(src, out_dir)

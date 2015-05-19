@@ -128,9 +128,9 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
-    print("+" * 20)
-    print("different resulation dir :", res)
-    print("+" * 20)
+    print(("+" * 20))
+    print(("different resulation dir :", res))
+    print(("+" * 20))
     if res == None:
         status.status = 'FAILED - RESULATION STEP '
         store(ticket, status)
@@ -138,9 +138,9 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     status.status = 'FRAGMENTATION STARTED'
     store(ticket, status)
     frag = fragment_file(res)
-    print("-" * 30)
-    print("fragmented path:", frag)
-    print("-" * 30)
+    print(("-" * 30))
+    print(("fragmented path:", frag))
+    print(("-" * 30))
 
     if frag == None:
         status.status = 'FAILED - FRAGMENTATION STEP'
