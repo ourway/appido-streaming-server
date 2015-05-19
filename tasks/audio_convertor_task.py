@@ -98,7 +98,7 @@ def create_segments(src_dir):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     for i in glob.glob(os.path.join(src_dir, 'frag*mp4')):
-        cmd = ["python", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
+        cmd = ["python2", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
                "--exec-dir=%s/bin" % config.bento4_path, i, '-o', i + '_out']
         print(cmd)
         p = subprocess.Popen(cmd)

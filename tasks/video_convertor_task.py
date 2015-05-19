@@ -49,7 +49,7 @@ def fragment_file(src):
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
-    cmd = ['nice', '-n', '20', 'python', os.path.join(config.bento4_path,
+    cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                          'utils', 'mp4-dash-encode.py'), '-v', '-b', str(bw_count), '-m',
            str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
     print(' '.join(cmd))
@@ -102,7 +102,7 @@ def create_segments(src):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
-    cmd = ["nice", "python",  os.path.join(config.bento4_path, 'utils',
+    cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
                                               'mp4-dash.py'), "--mpd-name=" + mpd_file,
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
