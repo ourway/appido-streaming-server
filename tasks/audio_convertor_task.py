@@ -8,7 +8,7 @@ import glob
 import copy
 from lxml import etree
 import shutil
-from utils import store, Status
+from utils import store, restore, md5_for_file, Status
 import config
 from config import app
 import requests
@@ -72,7 +72,7 @@ def hls_segments(src, out_dir):
     return out_dir
 
 
-def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
+def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
@@ -120,8 +120,10 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         fullfilename = "{dir}/{file}".format(dir=config.input_folder,
                                              file=filename)
 
+    fmd5 = md5_for_file(fullfilename)
     status.status = 'STARTED'
     store(ticket, status)
+    store(fmd5, status)
     r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
@@ -202,10 +204,11 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/streaming/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file=ticket),
+        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
     )
     store(ticket, status)
+    store(fmd5, status)
     if webhook:
         try:
             requests.post(webhook)

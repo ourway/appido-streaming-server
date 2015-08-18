@@ -8,13 +8,14 @@ import glob
 from subprocess import Popen, PIPE
 from lxml import etree
 import shutil
-from utils import store, Status
+from utils import store, restore, md5_for_file, Status
 import requests
 from requests.exceptions import ConnectionError
 import config
 from config import app
 import re
 from utils import download_file
+import hashlib
 
 r = config.REDIS
 
@@ -38,7 +39,7 @@ def fragment_file(src, fd=8000):
         tmp=config.work_folder_tmp, file=tmp_file)
     cmd = ["nice", os.path.join(config.bento4_path, 'bin',
                                 "mp4fragment"), '--index', 
-                                #'--fragment-duration', str(fd), 
+                                '--fragment-duration', str(fd), 
                                 src, fullpath]
     p = subprocess.Popen(cmd)
     p.wait()
@@ -53,8 +54,8 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
                                         dir_name=uuid.uuid4().hex)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                        'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
-                                                       #'-m', str(min_bw), '-n', str(max_bw),
-                                                       '--select-streams', '0,1', src, '-o', out_dir]
+                                                       '-m', str(min_bw), '-n', str(max_bw),
+                                                       src, '-o', out_dir]
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -98,11 +99,10 @@ def create_segments(src):
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                                            'mp4-dash.py'), '-f', '--use-segment-timeline', '--use-segment-list', "--mpd-name=" + mpd_file,
+                                            'mp4-dash.py'), '-f', '-v', '--use-segment-timeline', "--mpd-name=" + mpd_file, '--use-segment-list', 
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
-    print(cmd)
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -124,7 +124,7 @@ def create_segments(src):
 
 
 @app.task
-def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
+def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
                   webhook=None, abspath=False, url=True):
     status = Status()
     if abspath:
@@ -135,10 +135,15 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
         fullfilename = "{dir}/{file}".format(dir=config.input_folder,
                                              file=filename)
 
+    fmd5 = md5_for_file(fullfilename)
+    '''Now I need to check hash of file'''
+
+
     status.status = 'STARTED'
     store(ticket, status)
     status.status = 'FRAGMENTATION'
     store(ticket, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     frag = fragment_file(fullfilename)
     if frag == None:
         status.status = 'FAILED'
@@ -181,10 +186,11 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/streaming/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file=ticket),
+        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
     )
     store(ticket, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     if webhook:
         try:
             requests.post(webhook)

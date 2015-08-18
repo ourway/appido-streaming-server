@@ -5,6 +5,7 @@ from config import REDIS as r
 from config import salt, input_folder
 import os
 import requests
+import hashlib
 
 
 class Status(object):
@@ -71,3 +72,19 @@ def download_file(url, ticket):
     status.info = ''
     store(ticket, status)
     return local_filename
+
+
+
+def md5_for_file(f, block_size=2**20):
+    f = open(f, 'rb')
+    md5 = hashlib.md5()
+    while True:
+        data = f.read(block_size)
+        if not data:
+            break
+        md5.update(data)
+    return md5.hexdigest()
+
+
+
+

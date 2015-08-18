@@ -13,6 +13,7 @@ import uuid
 #from convert_task import convert
 import tasks
 import config
+from utils import store, restore, md5_for_file
 import requests
 
 
@@ -128,6 +129,10 @@ def media_add_path():
             fpath = url
         else:
             fpath = filepath
+            fmd5 = md5_for_file(fpath)
+            remd5 = restore(fmd5)
+            if remd5:
+                return dict(message='Available', data=remd5)
         if _format == 'video':
             task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
                                              abspath=filepath != None, url=url != None)
@@ -144,9 +149,9 @@ def media_add_path():
 #    return static_file(filename, root='.')
 
 
-@application.route('/streaming/static/<filename:path>')
-def static_serve(filename):
-    return static_file(filename, root='.')
+#@application.route('/streaming/static/<filename:path>')
+#def static_serve(filename):
+#    return static_file(filename, root='.')
 
 
 @application.get('/streaming/ping')
