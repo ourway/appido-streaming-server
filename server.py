@@ -13,8 +13,10 @@ import uuid
 #from convert_task import convert
 import tasks
 import config
-from utils import store, restore, md5_for_file
+from utils import store, restore, remove,  md5_for_file
 import requests
+import logging
+logger = logging.getLogger(__name__)
 
 
 #app = config.app
@@ -38,6 +40,7 @@ def get_key(key):
 
 @application.get('/streaming/api/revoke/<task_id>')
 def revoke(task_id):
+    remove(task_id)
     config.app.control.revoke(task_id)
     return dict(status(task_id))
 
@@ -121,6 +124,7 @@ def media_add_path():
     _format = request.json.get('format', 'video')
     url = request.json.get('url', None)
     webhook = request.json.get('webhook')
+    logger.error('recived a request on %s'%filepath or url)
     if not (url or filepath):
         abort(400)
     ticket = uuid.uuid4().hex
@@ -132,7 +136,14 @@ def media_add_path():
             fmd5 = md5_for_file(fpath)
             remd5 = restore(fmd5)
             if remd5:
-                return dict(message='Available', data=remd5)
+                old_ticket = remd5.get('ticket')
+                logger.error('file with same md5 available. ticket: %s'%old_ticket)
+                if old_ticket and not get_key(old_ticket)['result'] .get('status') == 'SUCCUSS':
+                    remove(fmd5)
+                    revoke(old_ticket)
+                    abort(786)
+                else:
+                    return dict(message='Available', ticket=old_ticket)
         if _format == 'video':
             task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
                                              abspath=filepath != None, url=url != None)

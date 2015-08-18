@@ -6,6 +6,7 @@ from celery import current_task
 from kombu import Exchange, Queue
 
 
+BROKER_TRANSPORT_OPTIONS = {'fanout_patterns': True, 'fanout_prefix': True}
 REDIS_HOST = 'appido-redis'
 BROKER_URL = 'redis://%s:6379/10' % REDIS_HOST
 CELERY_RESULT_BACKEND = 'redis://appido-redis:6379/11'

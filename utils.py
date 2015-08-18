@@ -26,6 +26,11 @@ def restore(key):
     if data:
         return json.loads(data)
 
+def remove(key):
+    """Get a complex object from redis"""
+    r.delete(salt + key)
+
+
 
 import requests
 import os
