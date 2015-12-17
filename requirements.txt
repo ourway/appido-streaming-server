@@ -2,3 +2,5 @@ celery
 bottle
 redis
 lxml
+gunicorn
+waitress

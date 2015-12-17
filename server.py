@@ -1,5 +1,15 @@
 #!/usr/bin/env python
 
+
+__authors = 'Masoud Mazarei and Farsheed Ashouri'
+
+__copyright = 'Rashavas telecom @ 2015-2016'
+
+__description = '''
+Thanks for masoud for doing all hard work
+'''
+
+
 import bottle
 from bottle import route, run, static_file, post, request, response
 import os
@@ -7,15 +17,15 @@ import uuid
 #from convert_task import convert
 import tasks
 from config import REDIS
-app = application = bottle.Bottle()
+application = application = bottle.Bottle()
 
 
-@app.get('/api/key/<key>')
+@application.get('/api/key/<key>')
 def get_key(key):
     return REDIS.get(key)
 
 
-@app.post('/api/upload')
+@application.post('/api/upload')
 def upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
@@ -41,7 +51,7 @@ def upload():
         return dict(message='Partial')
 
 
-@app.post('/api/audio_upload')
+@application.post('/api/audio_upload')
 def upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
@@ -67,17 +77,17 @@ def upload():
         return dict(message='Partial')
 
 
-@app.route('<filename:re:.*>')
+@application.route('<filename:re:.*>')
 def send_image(filename):
     return static_file(filename, root='.')
 
 
-@app.route('/hello')
+@application.route('/hello')
 def hello():
     return "Hello World!"
 
 
 if __name__ == '__main__':
-    bottle.run(app=app,
+    bottle.run(app=application,
                host='0.0.0.0',
-               port=8080)
+               port=3000)
