@@ -12,3 +12,4 @@ out_folder = os.path.abspath("videos")
 bento4_path = os.path.abspath(os.path.join(os.getenv('HOME'), 'Bento4'))
 admin_user = 'admin'
 admin_password = 'why_321'
+salt = 'Do_of_09m'

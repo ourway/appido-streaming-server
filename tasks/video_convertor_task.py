@@ -5,9 +5,11 @@ import os
 import sys
 import uuid
 import glob
+from subprocess import Popen, PIPE
 from lxml import etree
 import shutil
 #import redis
+from utils import store, Status
 
 import config
 from config import app
@@ -15,11 +17,6 @@ from config import app
 r = config.REDIS
 
 
-def execute(command):
-    popen = psutil.Popen(command, stdout=subprocess.PIPE, bufsize=16)
-    lines_iterator = iter(popen.stdout.readline, b"")
-    for line in lines_iterator:
-        print(line)  # yield line
 
 
 def fragment_file(src):
@@ -42,9 +39,16 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
                                         dir_name=uuid.uuid4().hex)
     cmd = ['python2.7', os.path.join(config.bento4_path, 'utils', 'mp4-dash-encode.py'), '-v',
            '-b', str(bw_count), '-m', str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    print "\n Creating Different Resulations \n"
-    p = subprocess.Popen(cmd)
-    p.wait()
+    print cmd
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
+    x = Status()
+    with p.stdout:
+        for line in iter(p.stdout.readline, b''):
+            x.status = line
+            #store('FUNNY', x)
+            #print line,
+    p.wait() # wait for the subprocess to exit
+
     if p.returncode == 0:
         return out_dir
     else:
@@ -81,24 +85,37 @@ def create_segments(src):
 
 @app.task
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
+    
+    status = Status()
+
     fullfilename = "{dir}/{file}".format(
         dir=config.input_folder, file=filename)
-    r.set(ticket, 'STARTED')
-    r.set(ticket, 'FRAGMENTATION')
+    status.status = 'STARTED'
+    store(ticket, status)
+    status.status = 'FRAGMENTATION'
+    store(ticket, status)
     frag = fragment_file(fullfilename)
     if frag == None:
-        r.set(ticket, 'FAILED - FRAGMENTATION FAILED')
+        status.status = 'FAILED'
+        status.info = 'fragmantation failed'
+        store(ticket, status)
         return
-    r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
-        count=bw_count, min=min_bw, max=max_bw))
+    status.status = 'RESULATION PROCESS'
+    status.info = 'MAKE {count} resulations from {min} to {max}'.format(
+        count=bw_count, min=min_bw, max=max_bw)
+    store(ticket, status)
     res = create_different_resulations(frag, min_bw, max_bw, bw_count)
     if res == None:
-        r.set(ticket, 'FAILED - RESULATION STEP ')
+        status.status = 'FAILED'
+        status.info = 'resulations steps failed'
+        store(ticket, status)
         return
-    r.set(ticket, 'SEGMENTATION STARTED')
+    status.status = 'SEGMENTATION STARTED'
     seg = create_segments(res)
     if not seg:
-        r.set(ticket, 'FAILED - SEGMENTATION FAILED')
+        status.status = 'FAILED'
+        status.info = 'segmentation failed'
+        store(ticket, status)
         return
 
     ## cleanup
@@ -107,10 +124,16 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
 
     fin_folder = "{dir}/{file}".format(dir=config.out_folder, file=ticket)
     try:
-
-        r.set(ticket, 'Move Result To Final path')
+        status.status = 'PREPARING'
+        status.info = 'Moving files to final folders'
+        store(ticket, status)
         shutil.move(seg, fin_folder)
     except:
-        r.set(ticket, 'FAILED - move result to final destionation problem')
+        status.status = 'FAILED'
+        status.info = 'failed in preparing final folders'
+        store(ticket, status)
         return
-    r.set(ticket, 'SUCCESS - ' + fin_folder)
+
+    status.status = 'SUCCESS'
+    status.info = fin_folder
+    store(ticket, status)

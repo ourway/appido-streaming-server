@@ -6,3 +6,4 @@ gunicorn
 waitress
 msgpack-python
 ujson
+pydal

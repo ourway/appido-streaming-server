@@ -1,0 +1,91 @@
+<div class="container" style="">
+<div class="col-6 col-md-6"
+    flow-init="{target: '/api/video_upload', 'testChunks': false,
+    'maxChunkRetries':5, 'simultaneousUploads':1, 'query':{'_ref':'admin panel'}}"
+     flow-files-submitted="$flow.upload()"
+     flow-file-success="$file.msg = parseMessage($message)">
+
+
+  <h3 align="center" style="color:#333" class="">Upload Videos</h3>
+  <hr class="colorgraph"/>
+    
+
+
+
+
+
+
+    <br/>
+
+  <div class="row">
+
+
+    <div class="span6">
+
+      <button class="btn btn-default" flow-btn><i class="fa fa-file"></i> Upload a file</button>
+      <button class="btn btn-default"
+      flow-btn flow-directory ng-show="$flow.supportDirectory"><i class="fa fa-folder-open"></i>
+        Upload a FOLDER
+    </button>
+    </div>
+  </div>
+
+  <div ng-show="$flow.getSize()">
+    <a class="btn btn-sm" ng-click="$flow.resume()"><i class="fa fa-play"></i></a>
+    <a class="btn btn-sm" ng-click="$flow.pause()"><i class="fa fa-pause"></i></a>
+    <a class="btn btn-sm" ng-click="$flow.cancel()"><i class="fa fa-stop"></i></a>
+    <span ng-show="$flow.getSize()" class="label label-info">{{$parent.getReadableFileSizeString($flow.getSize())}}</span>
+    <span ng-show="$flow.isUploading()"  class="label label-info"><i class="fa fa-spinner fa-spin"></i>
+</span>
+  <hr/>
+  </div>
+  <table class="table table-hover table-responsive table-striped" flow-transfers>
+    <thead>
+
+    </thead>
+    <tbody>
+    <tr ng-repeat="file in transfers"
+        ng-class="{'success':file.isComplete(), 'warning':file.paused, 'danger':file.error}">
+        <td>{{$index+1}}</td>
+      <td style="direction:ltr;text-align:center">{{file.name.slice(0,25)}}</td>
+      <td>{{$parent.getReadableFileSizeString(file.size)}}</td>
+      <td>{{$parent.parseInt(file.progress()*100)}}%</td>
+      <td><i ng-show="file.paused" class="fa fa-pause"></i></td>
+      <td><i ng-show="file.isUploading()" class="fa fa-cog fa-spin"></i></td>
+      <td><i ng-show="file.isComplete()" class="fa fa-check-square"></i></td>
+      <td>
+        <div class="btn-group">
+          <a class="btn btn-sm btn-warning" ng-click="file.pause()" ng-hide="file.paused || file.isComplete()">
+            <i class="fa fa-pause"></i>
+          </a>
+          <a class="btn btn-sm btn-warning"
+           ng-click="file.resume()" ng-show="file.paused">
+            <i class="fa fa-play"></i>
+          </a>
+          <a class="btn btn-sm btn-danger" ng-click="file.cancel()" ng-show="!file.isComplete()">
+            <i class="fa fa-stop"></i>
+          </a>
+          <a class="btn btn-sm btn-info" ng-click="file.retry()" ng-show="file.error">
+            <i class="fa fa-refresh"></i>
+          </a>
+        </div>
+      </td>
+      <td><a ng-show="file.isComplete()"
+          target="_new" href="#/status/convert/{{file.msg.ticket_id}}">
+          <i class="fa fa-link"></i>
+          {{file.msg.ticket_id.slice(0,7)}}</a></td>
+
+    <td><span ng-show="file.averageSpeed" > {{$parent.getReadableFileSizeString(file.averageSpeed)}} Per Second</span></td>
+    </tr>
+    </tbody>
+  </table>
+
+
+  <div class="alert" flow-drop flow-drag-enter="class='alert-success'" flow-drag-leave="class=''"
+          ng-class="class">
+
+  <i class="fa fa-desktop fa-5x"></i>
+    Drag Here
+  </div>
+</div>
+</div>

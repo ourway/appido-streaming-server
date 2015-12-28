@@ -17,22 +17,24 @@ import uuid
 #from convert_task import convert
 import tasks
 import config
+from models.db import db
+from utils import restore
 
-r = config.REDIS
 application = application = bottle.Bottle()
 
 
 @application.hook('after_request')
-def enable_cors():
-    response.headers['Access-Control-Allow-Origin'] = '*'
+def after():
+    pass
+    #response.headers['Access-Control-Allow-Origin'] = '*'
 
 
 @application.get('/api/key/<key>')
 def get_key(key):
-    return r.get(key)
+    return dict(result=restore(key))
 
 
-@application.post('/api/upload')
+@application.post('/api/video_upload')
 def video_upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
@@ -55,7 +57,7 @@ def video_upload():
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
         tasks.video_convert.delay(new_file_name, ticket)
-        return dict(message='OK', ticket=ticket)
+        return dict(message='OK', ticket_id=ticket)
     else:
         response.status = 202
         return dict(message='Partial')

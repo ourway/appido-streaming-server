@@ -6,3 +6,5 @@ uploads/
 videos/
 video_tmp/
 *.log
+*.table
+*.db

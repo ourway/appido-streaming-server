@@ -1,38 +1,85 @@
-<html ng-app='uploaderApp'>
-<head>
-	<script type="text/javascript" src="assets/angular.min.js"></script>
-	<script src="assets/ng-flow-standalone.min.js"></script>
-	<script type="text/javascript">
+<!doctype html>
+<html class="no-js" lang="" ng-app="ngApp">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-		var app = angular.module('uploaderApp', ['flow']);
-		app.controller('mainCtrl',function($scope, $http, $rootScope){
+        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+        <!-- Place favicon.ico in the root directory -->
 
-		})
+        <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/one-page-wonder.css">
+        <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
+        <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.min.css">
+        <link rel="stylesheet" href="css/main.css">
+        <script src="js/vendor/modernizr-2.8.3.min.js"></script>
+    </head>
+    <body>
+        <!--[if lt IE 8]>
+            <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
 
 
-	</script>
-</head>
-<body ng-controller="mainCtrl">
-	<div 
-	flow-init="{target: '/api/upload', 'testChunks': false,
-    'maxChunkRetries':5, 'simultaneousUploads':1, 'query':{'attached_to':$parent.ticket_id}}"
-	flow-init1="{target: '/api/upload'}"
-     flow-files-submitted="$flow.upload()"
-     flow-file-success="$file.msg = $message">
 
-  <input type="file" flow-btn/>
-  Input OR Other element as upload button
-  <span class="btn" flow-btn>Upload File</span>
 
-  <table>
-    <tr ng-repeat="file in $flow.files">
-        <td>{{$index+1}}</td>
-        <td>{{file.name}}</td>
-        <td>{{file.msg}}</td>
-    </tr>
-  </table>
-</div>
+        <!-- Add your site or application content here -->
+    <!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">Appido Streaming Server Admin</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a href="#upload">Upload</a>
+                    </li>
+                    <li>
+                        <a href="#list">Your Files</a>
+                    </li>
+                    <li>
+                        <a href="#reports">Reports</a>
+                    </li>
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </div>
+        <!-- /.container -->
+    </nav>
 
-</body>
 
+
+
+
+
+
+
+        <div ng-controller="MainController">
+                        <div ng-view></div>
+        </div>
+
+        <script>window.jQuery || document.write('<script src="bower_components/jquery/dist/jquery.min.js"><\/script>')</script>
+
+
+
+        <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+        <script src="bower_components/angular/angular.min.js"></script>
+        <script src="bower_components/angular-route/angular-route.min.js"></script>
+        <script src="bower_components/ng-flow/dist/ng-flow-standalone.min.js"></script>
+        <script src="js/vendor/dash.all.js"></script>
+        <script src="js/plugins.js"></script>
+        <script src="js/main.js"></script>
+
+    </body>
 </html>
