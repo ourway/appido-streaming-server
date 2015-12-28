@@ -2,7 +2,7 @@ import redis
 from celery import Celery
 import os
 
-REDIS_HOST = '192.168.99.100'
+REDIS_HOST = '127.0.0.1'
 BROKER_URL = 'redis://%s:6379/1' % REDIS_HOST
 app = Celery('tasks', broker=BROKER_URL)
 REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0)
