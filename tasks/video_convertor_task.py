@@ -23,7 +23,7 @@ def fragment_file(src):
     tmp_file = uuid.uuid4().hex
     fullpath = "{tmp}/{file}.mp4".format(
         tmp=config.work_folder_tmp, file=tmp_file)
-    cmd = [os.path.join(config.bento4_path, 'bin',
+    cmd = ["nice", os.path.join(config.bento4_path, 'bin',
                         "mp4fragment"), src, fullpath]
     print cmd
     p = subprocess.Popen(cmd)
@@ -37,7 +37,7 @@ def fragment_file(src):
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
-    cmd = ['python2.7', os.path.join(config.bento4_path, 'utils', 'mp4-dash-encode.py'), '-v',
+    cmd = ['nice', '-n', '20', 'python2.7', os.path.join(config.bento4_path, 'utils', 'mp4-dash-encode.py'), '-v',
            '-b', str(bw_count), '-m', str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
     print cmd
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
@@ -59,7 +59,7 @@ def create_segments(src):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
-    cmd = ["python2.7",  os.path.join(config.bento4_path, 'utils', 'mp4-dash.py'),
+    cmd = ["nice", "python2.7",  os.path.join(config.bento4_path, 'utils', 'mp4-dash.py'),
            "--mpd-name=" + mpd_file, "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
