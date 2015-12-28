@@ -9,9 +9,10 @@ from lxml import etree
 import shutil
 #import redis
 
-# work_folder_tmp="/home/videostreamer/video_tmp"
-# input_folder="/home/videostreamer/video_tmp"
-from config import REDIS, work_folder_tmp, input_folder, out_folder, app
+import config
+from config import app
+
+r = config.REDIS
 
 
 def execute(command):
@@ -22,9 +23,12 @@ def execute(command):
 
 
 def fragment_file(src):
-    tmp_file = str(uuid.uuid4())
-    fullpath = "{tmp}/{file}.mp4".format(tmp=work_folder_tmp, file=tmp_file)
-    cmd = ["/home/videostreamer/bin/mp4tools/mp4fragment", src, fullpath]
+    tmp_file = uuid.uuid4().hex
+    fullpath = "{tmp}/{file}.mp4".format(
+        tmp=config.work_folder_tmp, file=tmp_file)
+    cmd = [os.path.join(config.bento4_path, 'bin',
+                        "mp4fragment"), src, fullpath]
+    print cmd
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -34,12 +38,11 @@ def fragment_file(src):
 
 
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
-    out_dir = "{tmp}/{dir_name}".format(tmp=work_folder_tmp,
-                                        dir_name=str(uuid.uuid4()))
-    cmd = ['python2.7', '/home/videostreamer/bento4/utils/mp4-dash-encode.py', '-v',
+    out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
+                                        dir_name=uuid.uuid4().hex)
+    cmd = ['python2.7', os.path.join(config.bento4_path, 'utils', 'mp4-dash-encode.py'), '-v',
            '-b', str(bw_count), '-m', str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    print "call execute-------"
-    print cmd
+    print "\n Creating Different Resulations \n"
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -49,14 +52,14 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
 
 
 def create_segments(src):
-    out_dir = "{tmp}/{dir_name}".format(tmp=work_folder_tmp,
-                                        dir_name=str(uuid.uuid4()))
+    out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
+                                        dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
-    cmd = ["python2.7", "/home/videostreamer/bento4/utils/mp4-dash.py",
-           "--mpd-name=" + mpd_file, "--exec-dir=/home/videostreamer/bin/mp4tools"]
+    cmd = ["python2.7",  os.path.join(config.bento4_path, 'utils', 'mp4-dash.py'),
+           "--mpd-name=" + mpd_file, "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
-    print cmd
+    print "\n Creating Segments \n"
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -77,32 +80,37 @@ def create_segments(src):
 
 
 @app.task
-def video_convert(filename, min_bw=64, max_bw=1024, bw_count=10):
-    fullfilename = "{dir}/{file}".format(dir=input_folder, file=filename)
-    REDIS.set(filename, 'STARTED')
-    REDIS.set(filename, 'FRAGMENTATION')
+def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
+    fullfilename = "{dir}/{file}".format(
+        dir=config.input_folder, file=filename)
+    r.set(ticket, 'STARTED')
+    r.set(ticket, 'FRAGMENTATION')
     frag = fragment_file(fullfilename)
     if frag == None:
-        REDIS.set(filename, 'FAILED - FRAGMENTATION FAILED')
+        r.set(ticket, 'FAILED - FRAGMENTATION FAILED')
         return
-    REDIS.set(filename, 'MAKE {count} resulations from {min} to {max}'.format(
+    r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(frag, min_bw, max_bw, bw_count)
     if res == None:
-        REDIS.set(filename, 'FAILED - RESULATION STEP ')
+        r.set(ticket, 'FAILED - RESULATION STEP ')
         return
-    REDIS.set(filename, 'SEGMENTATION STARTED')
+    r.set(ticket, 'SEGMENTATION STARTED')
     seg = create_segments(res)
-    if seg == None:
-        REDIS.set(filename, 'FAILED - SEGMENTATION FAILED')
+    if not seg:
+        r.set(ticket, 'FAILED - SEGMENTATION FAILED')
         return
 
-    fin_folder = "{dir}/{file}".format(dir=out_folder, file=filename)
+    ## cleanup
+    shutil.rmtree(res)
+    os.remove(frag)
+
+    fin_folder = "{dir}/{file}".format(dir=config.out_folder, file=ticket)
     try:
 
-        REDIS.set(filename, 'Move Result To Final path')
+        r.set(ticket, 'Move Result To Final path')
         shutil.move(seg, fin_folder)
     except:
-        REDIS.set(filename, 'FAILED - move result to final destionation problem')
+        r.set(ticket, 'FAILED - move result to final destionation problem')
         return
-    REDIS.set(filename, 'SUCCESS - ' + fin_folder)
+    r.set(ticket, 'SUCCESS - ' + fin_folder)

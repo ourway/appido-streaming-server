@@ -16,17 +16,24 @@ import os
 import uuid
 #from convert_task import convert
 import tasks
-from config import REDIS
+import config
+
+r = config.REDIS
 application = application = bottle.Bottle()
+
+
+@application.hook('after_request')
+def enable_cors():
+    response.headers['Access-Control-Allow-Origin'] = '*'
 
 
 @application.get('/api/key/<key>')
 def get_key(key):
-    return REDIS.get(key)
+    return r.get(key)
 
 
 @application.post('/api/upload')
-def upload():
+def video_upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
     'flowRelativePath', 'flowTotalSize', 'flowFilename']
@@ -42,17 +49,20 @@ def upload():
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
         # set name to file
-        new_file_name = str(uuid.uuid4())
-        os.rename(temp_path, '/home/videostreamer/video_tmp/' + new_file_name)
-        tasks.video_convert.delay(new_file_name)
-        return dict(message='OK', ticket=new_file_name)
+        ext = request.forms.flowFilename.split('.')[-1]
+        ticket = uuid.uuid4().hex
+        new_file_name = ticket + '.' + ext
+        os.rename(temp_path, os.path.join(
+            config.work_folder_tmp, new_file_name))
+        tasks.video_convert.delay(new_file_name, ticket)
+        return dict(message='OK', ticket=ticket)
     else:
         response.status = 202
         return dict(message='Partial')
 
 
 @application.post('/api/audio_upload')
-def upload():
+def audio_upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
     'flowRelativePath', 'flowTotalSize', 'flowFilename']
@@ -67,24 +77,35 @@ def upload():
 
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
+
+
+        ext = request.forms.flowFilename.split('.')[-1]
+        ticket = uuid.uuid4().hex
+        new_file_name = ticket + '.' + ext
+ 
         # set name to file
-        new_file_name = str(uuid.uuid4())
-        os.rename(temp_path, '/home/videostreamer/video_tmp/' + new_file_name)
-        tasks.audio_convert.delay(new_file_name)
-        return dict(message='OK', ticket=new_file_name)
+        os.rename(temp_path, os.path.join(
+            config.work_folder_tmp, new_file_name))
+        tasks.audio_convert.delay(new_file_name, ticket)
+        return dict(message='OK', ticket=ticket)
     else:
         response.status = 202
         return dict(message='Partial')
 
 
-@application.route('<filename:re:.*>')
-def send_image(filename):
+#@application.route('<filename:re:.*>')
+# def send_image(filename):
+#    return static_file(filename, root='.')
+
+
+@application.route('/static/<filename:path>')
+def static_serve(filename):
     return static_file(filename, root='.')
 
 
-@application.route('/hello')
+@application.get('/ping')
 def hello():
-    return "Hello World!"
+    return dict(message='PONG')
 
 
 if __name__ == '__main__':

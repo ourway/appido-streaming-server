@@ -8,11 +8,12 @@ import glob
 import copy
 from lxml import etree
 import shutil
-#import redis
 
-# work_folder_tmp="/home/videostreamer/video_tmp"
-# input_folder="/home/videostreamer/video_tmp"
-from config import REDIS, work_folder_tmp, input_folder, out_folder, app
+import config
+from config import app
+
+r = config.REDIS
+
 
 
 def execute(command):
@@ -25,7 +26,7 @@ def execute(command):
 def fragment_file(src_dir):
     for i in os.listdir(src_dir):
 
-        cmd = ["/home/videostreamer/bin/mp4tools/mp4fragment",
+        cmd = [os.path.join(config.bento4_path, "mp4fragment"),
                os.path.join(src_dir, i), os.path.join(src_dir, 'fragged_%s' % i)]
         print cmd
         p = subprocess.Popen(cmd)
@@ -40,8 +41,8 @@ def fragment_file(src_dir):
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
-    out_dir = "{tmp}/{dir_name}".format(tmp=work_folder_tmp,
-                                        dir_name=str(uuid.uuid4()))
+    out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
+                                        dir_name=uuid.uuid4().hex)
     os.mkdir(out_dir)
     cmd = ['ffmpeg', '-i', src]
     for i in [['-vn', '-b:a', '%sk' % x, "{out_dir}/{filename}.mp4".format(out_dir=out_dir, filename=x)] for x in bw_ranges]:
@@ -58,11 +59,11 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
 
 
 def create_segments(src_dir):
-    out_dir = "{tmp}/{dir_name}".format(tmp=work_folder_tmp,
-                                        dir_name=str(uuid.uuid4()))
-    for i in glob.glob(os.path.join(src_dir, 'frag*mp4')):
-        cmd = ["python2.7", "/home/videostreamer/bento4/utils/mp4-dash.py",
-               "--exec-dir=/home/videostreamer/bin/mp4tools", i, '-o', i + '_out']
+    out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
+                                        dir_name=uuid.uuid4().hex)
+    for i in glob.glob(os.path.join(rc_dir, 'frag*mp4')):
+        cmd = ["python2.7", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
+               "--exec-dir=%s/bin"%config.bento4_path, i, '-o', i + '_out']
         print cmd
         p = subprocess.Popen(cmd)
         p.wait()
@@ -75,32 +76,32 @@ def create_segments(src_dir):
 
 
 @app.task
-def audio_convert(filename, min_bw=64, max_bw=1024, bw_count=10):
-    fullfilename = "{dir}/{file}".format(dir=input_folder, file=filename)
-    REDIS.set(filename, 'STARTED')
-    REDIS.set(filename, 'MAKE {count} resulations from {min} to {max}'.format(
+def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
+    fullfilename = "{dir}/{file}".format(dir=config.input_folder, file=filename)
+    r.set(ticket, 'STARTED')
+    r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
     if res == None:
-        REDIS.set(filename, 'FAILED - RESULATION STEP ')
+        r.set(ticket, 'FAILED - RESULATION STEP ')
         return
-    REDIS.set(filename, 'FRAGMENTATION STARTED')
+    r.set(ticket, 'FRAGMENTATION STARTED')
     frag = fragment_file(res)
     if frag == None:
-        REDIS.set(filename, 'FAILED - FRAGMENTATION STEP')
+        r.set(ticket, 'FAILED - FRAGMENTATION STEP')
         return
-    REDIS.set(filename, 'SEGMENTATION STARTED')
+    r.set(ticket, 'SEGMENTATION STARTED')
     seg = create_segments(frag)
     if seg == None:
-        REDIS.set(filename, 'FAILED - SEGMENTATION FAILED')
+        r.set(ticket, 'FAILED - SEGMENTATION FAILED')
         return
-    fin_folder = os.path.join(work_folder_tmp, str(uuid.uuid4()))
+    fin_folder = os.path.join(config.work_folder_tmp, uuid.uuid4().hex)
     os.mkdir(fin_folder)
     print fin_folder
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
     mpd_file = []
-    REDIS.set(filename, 'AGRIGATION STARTED')
+    r.set(ticket, 'AGRIGATION STARTED')
 
     for i in bw_ranges:
         _tmp = os.path.join(fin_folder, str(i))
@@ -124,10 +125,10 @@ def audio_convert(filename, min_bw=64, max_bw=1024, bw_count=10):
 
     with open(os.path.join(fin_folder, 'rashavas.mpd'), 'w') as g:
         g.write(etree.tostring(final_xml))
-    REDIS.set(filename, 'TRANSFER ASSETS TO STREAMER SERVER')
+    r.set(ticket, 'TRANSFER ASSETS TO STREAMER SERVER')
     print 'fin_folder', fin_folder
     print 'out_folder', out_folder
     shutil.move(fin_folder, out_folder)
-    REDIS.set(filename, 'SUCCESS TO GENERATE %s' % fin_folder)
+    r.set(ticket, 'SUCCESS TO GENERATE %s' % fin_folder)
 
 # audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);

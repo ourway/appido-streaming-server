@@ -3,4 +3,6 @@ venv/
 env/
 bin/
 uploads/
+videos/
+video_tmp/
 *.log
