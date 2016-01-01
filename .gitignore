@@ -9,3 +9,4 @@ video_tmp/
 *.table
 *.db
 temp/
+config.py
