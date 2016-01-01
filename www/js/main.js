@@ -45,8 +45,6 @@ app.controller('MainController', function($scope, $http, $rootScope){
     $scope.parseInt = parseInt;
 
 
-
-
 });
 app.controller('HomeController', function($scope, $http, $rootScope){});
 app.controller('VideoUploadController', function($scope, $http, $rootScope){
@@ -87,17 +85,18 @@ app.controller('VideoPlayerController', function($scope, $http, $routeParams, $i
            //player.attachSource(url);
            //
            //
+    
 
-shaka.polyfill.installAll();
-var video = document.getElementById('videoPlayer');
-var player = new shaka.player.Player(video);
-window.player = player;
-      player.addEventListener('error', function(event) {
-        console.error(event);
-      });
-var estimator = new shaka.util.EWMABandwidthEstimator();
-var source = new shaka.player.DashVideoSource(url, null, estimator);
-player.load(source);
+        shaka.polyfill.installAll();
+        var video = document.getElementById('videoPlayer');
+        var player = new shaka.player.Player(video);
+        window.player = player;
+              player.addEventListener('error', function(event) {
+                console.error(event);
+              });
+        var estimator = new shaka.util.EWMABandwidthEstimator();
+        var source = new shaka.player.DashVideoSource(url, null, estimator);
+        player.load(source);
 
 
 
