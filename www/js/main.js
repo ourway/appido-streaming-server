@@ -98,6 +98,9 @@ app.controller('VideoPlayerController', function($scope, $http, $routeParams, $i
         var source = new shaka.player.DashVideoSource(url, null, estimator);
         player.load(source);
 
+videojs("videoPlayer", {}, function(){
+      // Player (this) is initialized and ready.
+ });
 
 
 
