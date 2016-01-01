@@ -8,7 +8,6 @@ import glob
 from subprocess import Popen, PIPE
 from lxml import etree
 import shutil
-#import redis
 from utils import store, Status
 
 import config
@@ -25,7 +24,6 @@ def fragment_file(src):
         tmp=config.work_folder_tmp, file=tmp_file)
     cmd = ["nice", os.path.join(config.bento4_path, 'bin',
                         "mp4fragment"), src, fullpath]
-    print cmd
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -37,9 +35,9 @@ def fragment_file(src):
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
-    cmd = ['nice', '-n', '20', 'python2.7', os.path.join(config.bento4_path, 'utils', 'mp4-dash-encode.py'), '-v',
-           '-b', str(bw_count), '-m', str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    print cmd
+    cmd = ['nice', '-n', '20', 'python2.7', os.path.join(config.bento4_path,
+            'utils', 'mp4-dash-encode.py'), '-v', '-b', str(bw_count), '-m',
+           str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
     x = Status()
     with p.stdout:
@@ -59,8 +57,9 @@ def create_segments(src):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
-    cmd = ["nice", "python2.7",  os.path.join(config.bento4_path, 'utils', 'mp4-dash.py'),
-           "--mpd-name=" + mpd_file, "--exec-dir=%s/bin" % config.bento4_path]
+    cmd = ["nice", "python2.7",  os.path.join(config.bento4_path, 'utils',
+            'mp4-dash.py'), "--mpd-name=" + mpd_file,
+           "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
     print "\n Creating Segments \n"
@@ -85,9 +84,7 @@ def create_segments(src):
 
 @app.task
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
-    
     status = Status()
-
     fullfilename = "{dir}/{file}".format(
         dir=config.input_folder, file=filename)
     status.status = 'STARTED'

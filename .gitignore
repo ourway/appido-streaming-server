@@ -8,3 +8,4 @@ video_tmp/
 *.log
 *.table
 *.db
+config.py

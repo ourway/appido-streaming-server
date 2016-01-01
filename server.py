@@ -37,8 +37,9 @@ def get_key(key):
 @application.post('/api/video_upload')
 def video_upload():
     """ Will get streaming files via flow.js
-    ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
-    'flowRelativePath', 'flowTotalSize', 'flowFilename']
+    ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize',
+    'flowChunkNumber', 'flowIdentifier', 'flowRelativePath', 'flowTotalSize',
+    'flowFilename']
     """
     temp_path = os.path.join('uploads', request.forms.flowIdentifier)
     ''' first lets get the file'''
@@ -57,17 +58,18 @@ def video_upload():
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
         tasks.video_convert.delay(new_file_name, ticket)
-        return dict(message='OK', ticket_id=ticket)
+        return dict(message='Created', ticket_id=ticket)
     else:
         response.status = 202
-        return dict(message='Partial')
+        return dict(message='Accepted')
 
 
 @application.post('/api/audio_upload')
 def audio_upload():
     """ Will get streaming files via flow.js
-    ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize', 'flowChunkNumber', 'flowIdentifier',
-    'flowRelativePath', 'flowTotalSize', 'flowFilename']
+    ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize',
+    'flowChunkNumber', 'flowIdentifier', 'flowRelativePath', 'flowTotalSize',
+    'flowFilename']
     """
     temp_path = os.path.join('uploads', request.forms.flowIdentifier)
     ''' first lets get the file'''
@@ -80,19 +82,17 @@ def audio_upload():
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
 
-
         ext = request.forms.flowFilename.split('.')[-1]
         ticket = uuid.uuid4().hex
         new_file_name = ticket + '.' + ext
- 
         # set name to file
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
         tasks.audio_convert.delay(new_file_name, ticket)
-        return dict(message='OK', ticket=ticket)
+        return dict(message='Created', ticket=ticket)
     else:
         response.status = 202
-        return dict(message='Partial')
+        return dict(message='Accepted')
 
 
 #@application.route('<filename:re:.*>')
