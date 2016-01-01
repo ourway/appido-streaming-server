@@ -28,7 +28,18 @@ app.config(['$routeProvider',
             })
                 .when('/play/video/:ticket_id', {
                     templateUrl: 'templates/play/video.html',
-                    controller: 'VideoPlayerController'
+                    controller: 'DashVideoPlayerController'
+            })
+                .when('/play/video-dash', {
+                    templateUrl: 'templates/play/video.html',
+                    controller: 'DashVideoPlayerController'
+            })
+
+                .when('/play/video-hls', {
+                    templateUrl: 'templates/play/video.html',
+                    controller: 'HLSVideoPlayerController'
+ 
+
             })
  
 
@@ -67,26 +78,13 @@ app.controller('ConvertStatusController', function($scope, $http, $routeParams, 
         $interval($scope.getStatus, 1000);
 
 });
-app.controller('VideoPlayerController', function($scope, $http, $routeParams, $interval){
+app.controller('DashVideoPlayerController', function($scope, $http, $routeParams, $interval){
 
             
-           var ticket_id = $routeParams.ticket_id;
-           var url = "/static/videos/"+ ticket_id +"/rashavas.mpd";
-           console.log(url);
+    var ticket_id = $routeParams.ticket_id;
 
-           //var context = new Dash.di.DashContext();
-
-           //var player = new MediaPlayer(context);
-
-           //player.startup();
-
-           //player.attachView(document.querySelector("#videoPlayer"));
-
-           //player.attachSource(url);
-           //
-           //
-    
-
+   
+    $scope.playDash = function(url){
         shaka.polyfill.installAll();
         var video = document.getElementById('videoPlayer');
         var player = new shaka.player.Player(video);
@@ -97,14 +95,61 @@ app.controller('VideoPlayerController', function($scope, $http, $routeParams, $i
         var estimator = new shaka.util.EWMABandwidthEstimator();
         var source = new shaka.player.DashVideoSource(url, null, estimator);
         player.load(source);
-
-videojs("videoPlayer", {}, function(){
-      // Player (this) is initialized and ready.
- });
+    }
 
 
+    $scope.play = function(url){
+        console.log(url);
+        if (url.indexOf('.mpd')>-1){
+        $scope.playDash(url);
+        // videojs("videoPlayer", {}, function(){
+        //});
+
+
+        }
+        else{
+            alert('I can only play dash')
+        }
+    }
+
+    if (ticket_id)
+        {
+            var url = "/static/videos/"+ ticket_id +"/rashavas.mpd";
+            $scope.play(url);
+        }
+ 
+
+});
+
+
+
+
+app.controller('HLSVideoPlayerController', function($scope, $http, $routeParams, $interval){
+
+    $scope.playHLS = function(url){
+
+        var video = document.getElementById('videoPlayer');
+        var hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED,function() {
+            video.play();
+        });
+    }
+
+
+    $scope.play = function(url){
+        if (url.indexOf('m3u8')>-1){
+            videojs.players = {};
+            $scope.playHLS(url);
+        }
+        else{
+            alert('I can only play hls')
+        }
+    }
 
 
 });
+
 
 
