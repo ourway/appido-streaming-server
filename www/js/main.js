@@ -76,15 +76,33 @@ app.controller('VideoPlayerController', function($scope, $http, $routeParams, $i
            var url = "/static/videos/"+ ticket_id +"/rashavas.mpd";
            console.log(url);
 
-           var context = new Dash.di.DashContext();
+           //var context = new Dash.di.DashContext();
 
-           var player = new MediaPlayer(context);
+           //var player = new MediaPlayer(context);
 
-           player.startup();
+           //player.startup();
 
-           player.attachView(document.querySelector("#videoPlayer"));
+           //player.attachView(document.querySelector("#videoPlayer"));
 
-           player.attachSource(url);
+           //player.attachSource(url);
+           //
+           //
+
+shaka.polyfill.installAll();
+var video = document.getElementById('videoPlayer');
+var player = new shaka.player.Player(video);
+window.player = player;
+      player.addEventListener('error', function(event) {
+        console.error(event);
+      });
+var estimator = new shaka.util.EWMABandwidthEstimator();
+var source = new shaka.player.DashVideoSource(url, null, estimator);
+player.load(source);
 
 
-})
+
+
+
+});
+
+
