@@ -53,6 +53,36 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
         return None
 
 
+def hls_segments(src,out_dir):
+    out_dir=os.path.join(out_dir,'hls')
+    os.mkdir(out_dir)
+    files=glob.glob(src+'/*mp4')
+    m3u8=['#EXTM3U']
+    fmt_='#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
+
+    for f in files:
+        filename=f.split('/')[-1]
+        speed=filename.replace('.mp4','').replace('video_','')
+        fin_dir=os.path.join(out_dir,speed)
+        wdir=os.getcwd()
+        os.mkdir(fin_dir)
+        os.chdir(fin_dir)
+        cmd=['nice','-n','20',os.path.join(config.bento4_path,'bin','mp42hls'),f]
+        print cmd
+        p = subprocess.Popen(cmd)
+        p.wait()
+        m3u8.append(fmt_.format(bw=int(speed)*1024))
+        m3u8.append('{speed}/stream.m3u8'.format(speed=speed))
+        if p.returncode != 0:
+            os.chdir(wdir)
+            return None
+        else:
+            os.chdir(wdir)
+    rashavas_m3u8=open(os.path.join(out_dir,'rashavas.m3u8'),'w')
+    rashavas_m3u8.write('\r\n'.join(m3u8))
+    rashavas_m3u8.close()
+    return out_dir
+
 def create_segments(src):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
@@ -61,6 +91,7 @@ def create_segments(src):
             'mp4-dash.py'), "--mpd-name=" + mpd_file,
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
+    print cmd
     cmd.extend(["-o", out_dir])
     print "\n Creating Segments \n"
     p = subprocess.Popen(cmd)
@@ -77,6 +108,7 @@ def create_segments(src):
         f = open(out_dir + '/' + mpd_file, 'w')
         f.write(etree.tostring(tree))
         f.close()
+        hls_segments(src,out_dir)
         return out_dir
     else:
         return None
