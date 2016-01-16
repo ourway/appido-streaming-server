@@ -2,8 +2,7 @@ celery
 bottle
 redis
 lxml
-gunicorn
 waitress
+requests
 msgpack-python
 ujson
-pydal

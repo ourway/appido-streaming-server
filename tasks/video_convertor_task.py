@@ -9,13 +9,25 @@ from subprocess import Popen, PIPE
 from lxml import etree
 import shutil
 from utils import store, Status
+import requests
 
 import config
 from config import app
+import re
 
 r = config.REDIS
 
 
+pat = re.compile(r'frame= *([\d]+) *fps= *([\d]+) *q=([\d\.]+) +size= *([\d]+[\w]{2}) +time=([\d\.\:]+) *bitrate= *([\d\.]+[\w\/]+)')
+
+
+class Progress(object):
+    frame = None
+    fps = None
+    quality = None
+    size = None
+    timecode = None
+    bitrate = None
 
 
 def fragment_file(src):
@@ -38,14 +50,15 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     cmd = ['nice', '-n', '20', 'python2.7', os.path.join(config.bento4_path,
             'utils', 'mp4-dash-encode.py'), '-v', '-b', str(bw_count), '-m',
            str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1)
-    x = Status()
-    with p.stdout:
-        for line in iter(p.stdout.readline, b''):
-            x.status = line
-            #store('FUNNY', x)
-            #print line,
-    p.wait() # wait for the subprocess to exit
+    #print(' '.join(cmd))
+    p = subprocess.Popen(cmd, shell=False, stdin=PIPE, stdout=PIPE,
+                         stderr=PIPE, close_fds=True)
+
+    #for c in iter(lambda: p.stdout.read(1), b''):
+    #    sys.stdout.write(c)
+
+    p.communicate()
+
 
     if p.returncode == 0:
         return out_dir
@@ -68,7 +81,6 @@ def hls_segments(src,out_dir):
         os.mkdir(fin_dir)
         os.chdir(fin_dir)
         cmd=['nice','-n','20',os.path.join(config.bento4_path,'bin','mp42hls'),f]
-        print cmd
         p = subprocess.Popen(cmd)
         p.wait()
         m3u8.append(fmt_.format(bw=int(speed)*1024))
@@ -115,10 +127,15 @@ def create_segments(src):
 
 
 @app.task
-def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
+def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
+                  webhook=None, abspath=False):
     status = Status()
-    fullfilename = "{dir}/{file}".format(
-        dir=config.input_folder, file=filename)
+    if not abspath:
+        fullfilename = "{dir}/{file}".format(dir=config.input_folder,
+                                         file=filename)
+    else:
+        fullfilename = filename
+
     status.status = 'STARTED'
     store(ticket, status)
     status.status = 'FRAGMENTATION'
@@ -166,3 +183,8 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
     status.status = 'SUCCESS'
     status.info = fin_folder
     store(ticket, status)
+    if webhook:
+        requests.post(webhook)
+
+
+

@@ -11,13 +11,12 @@ Thanks for masoud for doing all hard work
 
 
 import bottle
-from bottle import route, run, static_file, post, request, response
+from bottle import route, run, static_file, post, request, response, abort
 import os
 import uuid
 #from convert_task import convert
 import tasks
 import config
-from models.db import db
 from utils import restore
 
 application = application = bottle.Bottle()
@@ -25,8 +24,9 @@ application = application = bottle.Bottle()
 
 @application.hook('after_request')
 def after():
-    pass
-    #response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
 
 
 @application.get('/api/key/<key>')
@@ -51,6 +51,7 @@ def video_upload():
 
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
+        webhook = request.forms.get('webhook')
         # set name to file
         ext = request.forms.flowFilename.split('.')[-1]
         ticket = uuid.uuid4().hex
@@ -58,7 +59,7 @@ def video_upload():
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
         tasks.video_convert.delay(new_file_name, ticket)
-        return dict(message='Created', ticket_id=ticket)
+        return dict(message='Created', ticket=ticket, webhook=webhook)
     else:
         response.status = 202
         return dict(message='Accepted')
@@ -81,6 +82,7 @@ def audio_upload():
 
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
+        webhook = request.forms.get('webhook')
 
         ext = request.forms.flowFilename.split('.')[-1]
         ticket = uuid.uuid4().hex
@@ -93,6 +95,21 @@ def audio_upload():
     else:
         response.status = 202
         return dict(message='Accepted')
+
+
+
+
+@application.post('/api/video_add_path')
+def video_add_path():
+        filepath = request.json.get('filepath')
+        webhook = request.json.get('webhook')
+        if not filepath:
+            abort(400)
+        ticket = uuid.uuid4().hex
+        if os.path.isfile(filepath):
+            tasks.video_convert.delay(filepath, ticket, webhook=webhook, abspath=True)
+            response.status = 201
+            return dict(message='Created', ticket=ticket, webhook=webhook)
 
 
 #@application.route('<filename:re:.*>')
