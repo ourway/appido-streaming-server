@@ -135,7 +135,7 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     if abspath:
         fullfilename = filename
     elif url:
-        fullfilename = download_file(filename)
+        fullfilename = download_file(filename, ticket)
     else:
         fullfilename = "{dir}/{file}".format(dir=config.input_folder,
                                          file=filename)

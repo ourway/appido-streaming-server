@@ -29,14 +29,21 @@ import requests
 import os
 
 
-def download_file(url):
+def download_file(url, ticket):
     local_filename = os.path.join(input_folder, url.split('/')[-1])
+    status = Status()
 
+    status.status = 'Start Downloading'
+
+    store(ticket, status)
     # NOTE the stream=True parameter
     h = requests.head(url)
     clength = h.headers['Content-Length']
     if not clength:
         print('Cant get Content Length')
+	status.status = 'Failed'
+	status.info = 'Can not download %s '% url
+    	store(ticket, status)
         abort(400)
     else:
         print('Downloading %s' % url)
@@ -49,11 +56,18 @@ def download_file(url):
         for chunk in r.iter_content(chunk_size=chunk_size): 
             if chunk: # filter out keep-alive new chunks
                 percent = ((part*chunk_size) * 100 ) / clength
+		status.status = 'Downloading'
+		status.info = '%s percent ' % percent
+		store(ticket, status)
                 print('%s Percent' % percent)
                 f.write(chunk)
                 f.flush()
                 os.fsync(f.fileno())
                 part+=1
                 #f.flush() commented by recommendation from J.F.Sebastian
+
+    status.status = 'Download Finished'
+    status.info = ''
+    store(ticket, status)
     return local_filename
 
