@@ -18,6 +18,7 @@ import uuid
 import tasks
 import config
 from utils import restore
+import requests
 
 application = application = bottle.Bottle()
 
@@ -58,8 +59,9 @@ def video_upload():
         new_file_name = ticket + '.' + ext
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
-        tasks.video_convert.delay(new_file_name, ticket)
-        return dict(message='Created', ticket=ticket, webhook=webhook)
+        task = tasks.video_convert.delay(new_file_name, ticket)
+        return dict(message='Created', ticket=ticket, webhook=webhook,
+                    task=str(task))
     else:
         response.status = 202
         return dict(message='Accepted')
@@ -90,8 +92,9 @@ def audio_upload():
         # set name to file
         os.rename(temp_path, os.path.join(
             config.work_folder_tmp, new_file_name))
-        tasks.audio_convert.delay(new_file_name, ticket)
-        return dict(message='Created', ticket=ticket)
+        task = tasks.audio_convert.delay(new_file_name, ticket)
+        return dict(message='Created', ticket=ticket, webhook=webhook,
+                    task=str(task))
     else:
         response.status = 202
         return dict(message='Accepted')
@@ -101,15 +104,23 @@ def audio_upload():
 
 @application.post('/api/video_add_path')
 def video_add_path():
-        filepath = request.json.get('filepath')
+        fpath = None
+        filepath = request.json.get('filepath', None)
+        url = request.json.get('url', None)
         webhook = request.json.get('webhook')
-        if not filepath:
+        if not (url or filepath):
             abort(400)
         ticket = uuid.uuid4().hex
-        if os.path.isfile(filepath):
-            tasks.video_convert.delay(filepath, ticket, webhook=webhook, abspath=True)
+        if (filepath and os.path.isfile(filepath)) or url:
+            if not filepath:
+                fpath=url
+            else:
+                fpath = filepath
+            task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
+                            abspath=filepath!=None, url=url!=None)
             response.status = 201
-            return dict(message='Created', ticket=ticket, webhook=webhook)
+            return dict(message='Created', ticket=ticket, webhook=webhook,
+                        task=str(task))
 
 
 #@application.route('<filename:re:.*>')

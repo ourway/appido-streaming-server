@@ -10,3 +10,4 @@ video_tmp/
 *.db
 temp/
 config.py
+*.state

@@ -14,6 +14,7 @@ import requests
 import config
 from config import app
 import re
+from utils import download_file
 
 r = config.REDIS
 
@@ -128,13 +129,17 @@ def create_segments(src):
 
 @app.task
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
-                  webhook=None, abspath=False):
+                  webhook=None, abspath=False, url=True):
     status = Status()
-    if not abspath:
+    print(filename, url, abspath)
+    if abspath:
+        fullfilename = filename
+    elif url:
+        fullfilename = download_file(filename)
+    else:
         fullfilename = "{dir}/{file}".format(dir=config.input_folder,
                                          file=filename)
-    else:
-        fullfilename = filename
+ 
 
     status.status = 'STARTED'
     store(ticket, status)
@@ -181,7 +186,10 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         return
 
     status.status = 'SUCCESS'
-    status.info = fin_folder
+    status.info = dict(
+                mpd='/videos/{file}/rashavas.mpd'.format(file=ticket),
+                m3u8='/videos/{file}/hls/rashavas.m3u8'.format(file=ticket),
+            )
     store(ticket, status)
     if webhook:
         requests.post(webhook)
