@@ -8,9 +8,12 @@ import glob
 import copy
 from lxml import etree
 import shutil
-
+from utils import store, Status
 import config
 from config import app
+import requests
+from utils import download_file
+import re
 
 r = config.REDIS
 
@@ -36,6 +39,40 @@ def fragment_file(src_dir):
         else:
             return None
     return src_dir
+
+
+
+def hls_segments(src,out_dir):
+    out_dir=os.path.join(out_dir,'hls')
+    os.mkdir(out_dir)
+    files=glob.glob(src+'/*mp4')
+    m3u8=['#EXTM3U']
+    fmt_='#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
+
+    for f in files:
+        filename=f.split('/')[-1]
+        speed=filename.replace('.mp4','').replace('video_','')
+        fin_dir=os.path.join(out_dir,speed)
+        wdir=os.getcwd()
+        os.mkdir(fin_dir)
+        os.chdir(fin_dir)
+        cmd=['nice','-n','20',os.path.join(config.bento4_path,'bin','mp42hls'),f]
+        p = subprocess.Popen(cmd)
+        p.wait()
+        m3u8.append(fmt_.format(bw=int(speed)*1024))
+        m3u8.append('{speed}/stream.m3u8'.format(speed=speed))
+        if p.returncode != 0:
+            os.chdir(wdir)
+            return None
+        else:
+            os.chdir(wdir)
+    rashavas_m3u8=open(os.path.join(out_dir,'rashavas.m3u8'),'w')
+    rashavas_m3u8.write('\r\n'.join(m3u8))
+    rashavas_m3u8.close()
+    return out_dir
+
+
+
 
 
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
@@ -76,32 +113,48 @@ def create_segments(src_dir):
 
 
 @app.task
-def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
-    fullfilename = "{dir}/{file}".format(dir=config.input_folder, file=filename)
-    r.set(ticket, 'STARTED')
+def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
+                  webhook=None, abspath=False, url=True):
+    status = Status()
+    if abspath:
+        fullfilename = filename
+    elif url:
+        fullfilename = download_file(filename, ticket)
+    else:
+        fullfilename = "{dir}/{file}".format(dir=config.input_folder,
+                                         file=filename)
+ 
+
+    status.status = 'STARTED'
+    store(ticket, status)
     r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
     if res == None:
-        r.set(ticket, 'FAILED - RESULATION STEP ')
+        status.status = 'FAILED - RESULATION STEP '
+        store(ticket, status)
         return
-    r.set(ticket, 'FRAGMENTATION STARTED')
+    status.status = 'FRAGMENTATION STARTED'
+    store(ticket, status)
     frag = fragment_file(res)
     if frag == None:
-        r.set(ticket, 'FAILED - FRAGMENTATION STEP')
+        status.status = 'FAILED - FRAGMENTATION STEP'
+        store(ticket, status)
         return
-    r.set(ticket, 'SEGMENTATION STARTED')
+    status.status = 'SEGMENTATION STARTED'
+    store(ticket, status)
     seg = create_segments(frag)
     if seg == None:
-        r.set(ticket, 'FAILED - SEGMENTATION FAILED')
+        status.status = 'FAILED - SEGMENTATION FAILED'
+        store(ticket, status)
         return
     fin_folder = os.path.join(config.work_folder_tmp, uuid.uuid4().hex)
     os.mkdir(fin_folder)
-    print fin_folder
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
     mpd_file = []
-    r.set(ticket, 'AGRIGATION STARTED')
+    status.status = 'AGRIGATION STARTED'
+    store(ticket, status)
 
     for i in bw_ranges:
         _tmp = os.path.join(fin_folder, str(i))
@@ -125,10 +178,16 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10):
 
     with open(os.path.join(fin_folder, 'rashavas.mpd'), 'w') as g:
         g.write(etree.tostring(final_xml))
-    r.set(ticket, 'TRANSFER ASSETS TO STREAMER SERVER')
-    print 'fin_folder', fin_folder
-    print 'out_folder', out_folder
+    status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
+    store(ticket, status)
     shutil.move(fin_folder, out_folder)
-    r.set(ticket, 'SUCCESS TO GENERATE %s' % fin_folder)
+
+    status.status = 'SUCCESS'
+    status.info = dict(
+                mpd='/videos/{file}/rashavas.mpd'.format(file=ticket),
+                m3u8='/videos/{file}/hls/rashavas.m3u8'.format(file=ticket),
+            )
+    store(ticket, status)
+ 
 
 # audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);

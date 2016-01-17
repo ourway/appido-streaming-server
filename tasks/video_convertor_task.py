@@ -131,7 +131,6 @@ def create_segments(src):
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
                   webhook=None, abspath=False, url=True):
     status = Status()
-    print(filename, url, abspath)
     if abspath:
         fullfilename = filename
     elif url:

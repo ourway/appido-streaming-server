@@ -106,6 +106,7 @@ def audio_upload():
 def video_add_path():
         fpath = None
         filepath = request.json.get('filepath', None)
+        _format = request.json.get('format', 'video')
         url = request.json.get('url', None)
         webhook = request.json.get('webhook')
         if not (url or filepath):
@@ -116,7 +117,11 @@ def video_add_path():
                 fpath=url
             else:
                 fpath = filepath
-            task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
+            if _format=='video':
+                task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
+                            abspath=filepath!=None, url=url!=None)
+            elif _format=='audio':
+                task = tasks.audio_convert.delay(fpath, ticket, webhook=webhook,
                             abspath=filepath!=None, url=url!=None)
             response.status = 201
             return dict(message='Created', ticket=ticket, webhook=webhook,
