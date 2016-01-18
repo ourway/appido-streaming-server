@@ -14,7 +14,7 @@ from config import app
 import requests
 from utils import download_file
 import re
-
+import ipdb
 r = config.REDIS
 
 
@@ -45,13 +45,13 @@ def fragment_file(src_dir):
 def hls_segments(src,out_dir):
     out_dir=os.path.join(out_dir,'hls')
     os.mkdir(out_dir)
-    files=glob.glob(src+'/*mp4')
+    files=glob.glob(src+'/frag*mp4')
     m3u8=['#EXTM3U']
     fmt_='#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
 
     for f in files:
         filename=f.split('/')[-1]
-        speed=filename.replace('.mp4','').replace('video_','')
+        speed=filename.replace('.mp4','').replace('fragged_','')
         fin_dir=os.path.join(out_dir,speed)
         wdir=os.getcwd()
         os.mkdir(fin_dir)
@@ -96,9 +96,11 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
 
 
 def create_segments(src_dir):
+    import ipdb
+    #ipdb.set_trace()
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
-    for i in glob.glob(os.path.join(rc_dir, 'frag*mp4')):
+    for i in glob.glob(os.path.join(src_dir, 'frag*mp4')):
         cmd = ["python2.7", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
                "--exec-dir=%s/bin"%config.bento4_path, i, '-o', i + '_out']
         print cmd
@@ -106,9 +108,9 @@ def create_segments(src_dir):
         p.wait()
         if p.returncode == 0:
             pass
-
         else:
             return None
+     
     return src_dir
 
 
@@ -130,6 +132,9 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
     res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
+    print "+"*20
+    print "different resulation dir :",res
+    print "+"*20
     if res == None:
         status.status = 'FAILED - RESULATION STEP '
         store(ticket, status)
@@ -137,6 +142,10 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     status.status = 'FRAGMENTATION STARTED'
     store(ticket, status)
     frag = fragment_file(res)
+    print "-"*30
+    print "fragmented path:",frag
+    print "-"*30
+
     if frag == None:
         status.status = 'FAILED - FRAGMENTATION STEP'
         store(ticket, status)
@@ -144,6 +153,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     status.status = 'SEGMENTATION STARTED'
     store(ticket, status)
     seg = create_segments(frag)
+    #ipdb.set_trace()
     if seg == None:
         status.status = 'FAILED - SEGMENTATION FAILED'
         store(ticket, status)
@@ -178,9 +188,19 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     with open(os.path.join(fin_folder, 'rashavas.mpd'), 'w') as g:
         g.write(etree.tostring(final_xml))
+
+    #ipdb.set_trace()
+    status.status = 'HLS Stream creation Started'
+    store(ticket,status)
+    if hls_segments(frag,fin_folder) is None:
+        status.status = 'creation HLS Stream Failed'
+        store(ticket,status)
+        exit(1)
+
+
     status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
     store(ticket, status)
-    shutil.move(fin_folder, out_folder)
+    shutil.move(fin_folder, os.path.join(config.out_folder,ticket))
 
     status.status = 'SUCCESS'
     status.info = dict(

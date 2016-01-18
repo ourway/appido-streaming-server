@@ -9,7 +9,7 @@ __description = '''
 Thanks for masoud for doing all hard work
 '''
 
-
+import ipdb
 import bottle
 from bottle import route, run, static_file, post, request, response, abort
 import os
@@ -101,10 +101,10 @@ def audio_upload():
 
 
 
-
 @application.post('/api/video_add_path')
 def video_add_path():
         fpath = None
+#        ipdb.set_trace()
         filepath = request.json.get('filepath', None)
         _format = request.json.get('format', 'video')
         url = request.json.get('url', None)
