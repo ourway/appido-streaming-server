@@ -14,7 +14,7 @@ from config import app
 import requests
 from utils import download_file
 import re
-import ipdb
+#import ipdb
 r = config.REDIS
 
 
@@ -96,7 +96,7 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
 
 
 def create_segments(src_dir):
-    import ipdb
+    #import ipdb
     #ipdb.set_trace()
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
