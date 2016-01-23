@@ -1,0 +1,46 @@
+#!/bin/bash
+
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do 
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" 
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+
+
+
+
+if [ ! -d ffmpeg ]
+    then
+        wget http://johnvansickle.com/ffmpeg/builds/ffmpeg-git-64bit-static.tar.xz
+        tar xzf ffmpeg-git-64bit-static.tar.xz
+        mv ffmpeg*/ ffmpeg 
+        rm ffmpeg-git-64bit-static.tar.xz
+fi
+
+
+if [ ! -d Bento4 ]
+    then
+        wget http://zebulon.bok.net/Bento4/binaries/Bento4-SDK-1-4-3-607.x86_64-unknown-linux.zip
+        unzip Bento4-SDK-1-4-3-607.x86_64-unknown-linux.zip
+        mv Bento4*/ Bento4
+        rm Bento4-SDK-1-4-3-607.x86_64-unknown-linux.zip
+fi
+
+
+
+docker build -t appido:streaming .
+
+
+docker run -d --name appido-streaming-api -p 4000:4000 --link appido-redis \
+        --volumes-from appido-storage appido:streaming /run-streaming-api
+
+docker run -d --name appido-streaming-schedueler --link appido-redis \
+        --volumes-from appido-storage appido:streaming /run-streaming-schedueler
+
+
+
+

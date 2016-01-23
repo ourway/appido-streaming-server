@@ -11,3 +11,7 @@ video_tmp/
 temp/
 config.py
 *.state
+*.bak
+Bento4/
+ffmpeg/
+*.gz

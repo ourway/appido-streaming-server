@@ -6,23 +6,24 @@ from config import salt, input_folder
 import os
 import requests
 
+
 class Status(object):
     status = None
     progress = 0
     message = None
     info = None
 
+
 def store(key, obj):
     """Store a complex object in redis"""
-    r.set(salt+key, json.dumps(obj))
+    r.set(salt + key, json.dumps(obj))
 
 
 def restore(key):
     """Get a complex object from redis"""
-    data = r.get(salt+key)
+    data = r.get(salt + key)
     if data:
         return json.loads(data)
-
 
 
 import requests
@@ -41,9 +42,9 @@ def download_file(url, ticket):
     clength = h.headers['Content-Length']
     if not clength:
         print('Cant get Content Length')
-	status.status = 'Failed'
-	status.info = 'Can not download %s '% url
-    	store(ticket, status)
+        status.status = 'Failed'
+        status.info = 'Can not download %s ' % url
+        store(ticket, status)
         abort(400)
     else:
         print('Downloading %s' % url)
@@ -53,21 +54,20 @@ def download_file(url, ticket):
     part = 0
     with open(local_filename, 'wb') as f:
         chunk_size = 2**16
-        for chunk in r.iter_content(chunk_size=chunk_size): 
-            if chunk: # filter out keep-alive new chunks
-                percent = ((part*chunk_size) * 100 ) / clength
-		status.status = 'Downloading'
-		status.info = '%s percent ' % percent
-		store(ticket, status)
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            if chunk:  # filter out keep-alive new chunks
+                percent = ((part * chunk_size) * 100) / clength
+                status.status = 'Downloading'
+                status.info = '%s percent ' % percent
+                store(ticket, status)
                 print('%s Percent' % percent)
                 f.write(chunk)
                 f.flush()
                 os.fsync(f.fileno())
-                part+=1
-                #f.flush() commented by recommendation from J.F.Sebastian
+                part += 1
+                # f.flush() commented by recommendation from J.F.Sebastian
 
     status.status = 'Download Finished'
     status.info = ''
     store(ticket, status)
     return local_filename
-

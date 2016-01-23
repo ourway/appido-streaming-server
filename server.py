@@ -9,6 +9,7 @@ __description = '''
 Thanks for masoud for doing all hard work
 '''
 
+
 #import ipdb
 import bottle
 from bottle import route, run, static_file, post, request, response, abort
@@ -26,8 +27,10 @@ application = application = bottle.Bottle()
 @application.hook('after_request')
 def after():
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
+    response.headers[
+        'Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
+    response.headers[
+        'Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
 
 
 @application.get('/api/key/<key>')
@@ -100,32 +103,31 @@ def audio_upload():
         return dict(message='Accepted')
 
 
-
 @application.post('/api/video_add_path')
 def video_add_path():
-        fpath = None
+    fpath = None
 #        ipdb.set_trace()
-        filepath = request.json.get('filepath', None)
-        _format = request.json.get('format', 'video')
-        url = request.json.get('url', None)
-        webhook = request.json.get('webhook')
-        if not (url or filepath):
-            abort(400)
-        ticket = uuid.uuid4().hex
-        if (filepath and os.path.isfile(filepath)) or url:
-            if not filepath:
-                fpath=url
-            else:
-                fpath = filepath
-            if _format=='video':
-                task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
-                            abspath=filepath!=None, url=url!=None)
-            elif _format=='audio':
-                task = tasks.audio_convert.delay(fpath, ticket, webhook=webhook,
-                            abspath=filepath!=None, url=url!=None)
-            response.status = 201
-            return dict(message='Created', ticket=ticket, webhook=webhook,
-                        task=str(task))
+    filepath = request.json.get('filepath', None)
+    _format = request.json.get('format', 'video')
+    url = request.json.get('url', None)
+    webhook = request.json.get('webhook')
+    if not (url or filepath):
+        abort(400)
+    ticket = uuid.uuid4().hex
+    if (filepath and os.path.isfile(filepath)) or url:
+        if not filepath:
+            fpath = url
+        else:
+            fpath = filepath
+        if _format == 'video':
+            task = tasks.video_convert(fpath, ticket, webhook=webhook,
+                                             abspath=filepath != None, url=url != None)
+        elif _format == 'audio':
+            task = tasks.audio_convert.delay(fpath, ticket, webhook=webhook,
+                                             abspath=filepath != None, url=url != None)
+        response.status = 201
+        return dict(message='Created', ticket=ticket, webhook=webhook,
+                    task=str(task))
 
 
 #@application.route('<filename:re:.*>')

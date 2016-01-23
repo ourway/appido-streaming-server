@@ -1,3 +1,0 @@
-#!/bin/bash
-
-env/bin/waitress-serve --port=8080 server:application 

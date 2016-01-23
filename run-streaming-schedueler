@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd /streaming
+celery -A tasks worker -l info

@@ -3,6 +3,7 @@ bottle
 redis
 lxml
 waitress
+gunicorn
 requests
 msgpack-python
 ujson
