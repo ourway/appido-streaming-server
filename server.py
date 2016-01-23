@@ -33,12 +33,12 @@ def after():
         'Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
 
 
-@application.get('/api/key/<key>')
+@application.get('/streaming/api/key/<key>')
 def get_key(key):
     return dict(result=restore(key))
 
 
-@application.post('/api/video_upload')
+@application.post('/streaming/api/video_upload')
 def video_upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize',
@@ -70,7 +70,7 @@ def video_upload():
         return dict(message='Accepted')
 
 
-@application.post('/api/audio_upload')
+@application.post('/streaming/api/audio_upload')
 def audio_upload():
     """ Will get streaming files via flow.js
     ['flowTotalChunks', 'flowChunkSize', 'flowCurrentChunkSize',
@@ -103,8 +103,8 @@ def audio_upload():
         return dict(message='Accepted')
 
 
-@application.post('/api/video_add_path')
-def video_add_path():
+@application.post('/streaming/api/media_add_path')
+def media_add_path():
     fpath = None
 #        ipdb.set_trace()
     filepath = request.json.get('filepath', None)
@@ -120,7 +120,7 @@ def video_add_path():
         else:
             fpath = filepath
         if _format == 'video':
-            task = tasks.video_convert(fpath, ticket, webhook=webhook,
+            task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
                                              abspath=filepath != None, url=url != None)
         elif _format == 'audio':
             task = tasks.audio_convert.delay(fpath, ticket, webhook=webhook,
@@ -135,12 +135,12 @@ def video_add_path():
 #    return static_file(filename, root='.')
 
 
-@application.route('/static/<filename:path>')
+@application.route('/streaming/static/<filename:path>')
 def static_serve(filename):
     return static_file(filename, root='.')
 
 
-@application.get('/ping')
+@application.get('/streaming/ping')
 def hello():
     return dict(message='PONG')
 

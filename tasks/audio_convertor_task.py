@@ -12,6 +12,7 @@ from utils import store, Status
 import config
 from config import app
 import requests
+from requests.exceptions import ConnectionError
 from utils import download_file
 import re
 #import ipdb
@@ -198,10 +199,15 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/videos/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/videos/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/streaming/{file}/rashavas.mpd'.format(file=ticket),
+        m3u8='/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
     )
     store(ticket, status)
+    if webhook:
+        try:
+            requests.post(webhook)
+        except ConnectionError:
+            pass
 
 
 # audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);

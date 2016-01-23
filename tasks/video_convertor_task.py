@@ -10,7 +10,7 @@ from lxml import etree
 import shutil
 from utils import store, Status
 import requests
-
+from requests.exceptions import ConnectionError
 import config
 from config import app
 import re
@@ -187,9 +187,12 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/videos/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/videos/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/streaming/{file}/rashavas.mpd'.format(file=ticket),
+        m3u8='/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
     )
     store(ticket, status)
     if webhook:
-        requests.post(webhook)
+        try:
+            requests.post(webhook)
+        except ConnectionError:
+            pass
