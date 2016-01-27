@@ -1,6 +1,8 @@
 FROM python:2
 
 ## for celery 
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
 ENV C_FORCE_ROOT=true
 
 ## bento4
