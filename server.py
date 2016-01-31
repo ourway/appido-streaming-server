@@ -38,6 +38,18 @@ def get_key(key):
     return dict(result=restore(key))
 
 
+@application.get('/streaming/api/revoke/<task_id>')
+def revoke(task_id):
+    config.app.control.revoke(task_id)
+    return dict(status(task_id))
+
+
+@application.get('/streaming/api/status/<task_id>')
+def status(task_id):
+    res = config.app.AsyncResult(task_id)
+    return dict(result=res.status)
+
+
 @application.post('/streaming/api/video_upload')
 def video_upload():
     """ Will get streaming files via flow.js

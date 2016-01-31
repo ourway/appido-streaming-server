@@ -1,22 +1,19 @@
 import redis
-from celery import Celery
 import os
+from celery import Celery
+from celery.result import AsyncResult
+from celery import current_task
+from kombu import Exchange, Queue
+
 
 REDIS_HOST = 'appido-redis'
-BROKER_URL = 'redis://%s:6379/2' % REDIS_HOST
-C_FORCE_ROOT = True
-CELERY_RESULT_BACKEND = 'redis://appido-redis:6379/3'
-
-CELERY_TASK_SERIALIZER = 'msgpack'
-CELERY_RESULT_SERIALIZER = 'msgpack'
-CELERY_ACCEPT_CONTENT = ['msgpack']
-CELERY_TIMEZONE = 'Asia/Tehran'
-CELERY_ENABLE_UTC = True
-C_FORCE_ROOT = True
+BROKER_URL = 'redis://%s:6379/10' % REDIS_HOST
+CELERY_RESULT_BACKEND = 'redis://appido-redis:6379/11'
 
 app = Celery('tasks', broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
-REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0)
+app.config_from_object('tasksConfig')
 
+REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379)
 
 work_folder_tmp = os.path.abspath("video_tmp")
 input_folder = os.path.abspath("video_tmp")

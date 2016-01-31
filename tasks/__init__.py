@@ -1,4 +1,6 @@
+import config
 from config import app
+
 from celery.result import AsyncResult
 
 
