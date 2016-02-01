@@ -75,10 +75,10 @@ def hls_segments(src, out_dir):
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
 
     for f in files:
-        filename = f.split('/')[-1]
-        speed = filename.replace('.mp4', '').replace('video_', '')
-        fin_dir = os.path.join(out_dir, speed)
-        wdir = os.getcwd()
+        filename      = os.path.basename(f)
+        speed         = filename.replace('.mp4', '').replace('video_', '')
+        fin_dir       = os.path.join(out_dir, speed)
+        wdir          = os.getcwd()
         os.mkdir(fin_dir)
         os.chdir(fin_dir)
         cmd = ['nice', '-n', '20',
