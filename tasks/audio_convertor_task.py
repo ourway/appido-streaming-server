@@ -31,7 +31,7 @@ def fragment_file(src_dir):
 
         cmd = [os.path.join(config.bento4_path, "mp4fragment"),
                os.path.join(src_dir, i), os.path.join(src_dir, 'fragged_%s' % i)]
-        print(cmd)
+        #print(cmd)
         p = subprocess.Popen(cmd)
         p.wait()
         if p.returncode == 0:
@@ -49,7 +49,7 @@ def hls_segments(src, out_dir):
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
 
     for f in files:
-        filename = f.split('/')[-1]
+        filename = os.path.basename(f)
         speed = filename.replace('.mp4', '').replace('fragged_', '')
         fin_dir = os.path.join(out_dir, speed)
         wdir = os.getcwd()
@@ -81,9 +81,7 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     cmd = ['ffmpeg', '-i', src]
     for i in [['-vn', '-b:a', '%sk' % x, "{out_dir}/{filename}.mp4".format(out_dir=out_dir, filename=x)] for x in bw_ranges]:
         cmd.extend(i)
-    print(cmd)
     print("call execute-------")
-    print(cmd)
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -100,7 +98,6 @@ def create_segments(src_dir):
     for i in glob.glob(os.path.join(src_dir, 'frag*mp4')):
         cmd = ["python2", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
                "--exec-dir=%s/bin" % config.bento4_path, i, '-o', i + '_out']
-        print(cmd)
         p = subprocess.Popen(cmd)
         p.wait()
         if p.returncode == 0:
@@ -208,6 +205,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
             requests.post(webhook)
         except ConnectionError:
             pass
+    return 'OK'
 
 
 # audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);

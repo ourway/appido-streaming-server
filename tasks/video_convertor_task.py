@@ -43,28 +43,21 @@ def fragment_file(src):
     if p.returncode == 0:
         return fullpath
     else:
-        return None
+        raise ValueError('ERROR on fragmentation')
 
 
 def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
-                                                         'utils', 'mp4-dash-encode.py'), '-v', '-b', str(bw_count), '-m',
+                    'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), '-m',
            str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
-    print((' '.join(cmd)))
-    p = subprocess.Popen(cmd, shell=False, stdin=PIPE, stdout=PIPE,
-                         stderr=PIPE, close_fds=True)
-
-    # for c in iter(lambda: p.stdout.read(1), b''):
-    #    sys.stdout.write(c)
-
-    p.communicate()
-
+    p = subprocess.Popen(cmd)
+    p.wait()
     if p.returncode == 0:
         return out_dir
     else:
-        return None
+        raise ValueError('ERROR on craete different resulations')
 
 
 def hls_segments(src, out_dir):
@@ -103,12 +96,10 @@ def create_segments(src):
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                                              'mp4-dash.py'), "--mpd-name=" + mpd_file,
+                    'mp4-dash.py'), '-f', "--mpd-name=" + mpd_file,
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
-    print(cmd)
     cmd.extend(["-o", out_dir])
-    print("\n Creating Segments \n")
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -126,7 +117,7 @@ def create_segments(src):
         hls_segments(src, out_dir)
         return out_dir
     else:
-        return None
+        raise ValueError('ERROR on create segments')
 
 
 @app.task
@@ -196,3 +187,4 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
             requests.post(webhook)
         except ConnectionError:
             pass
+    return 'OK'
