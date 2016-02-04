@@ -29,7 +29,7 @@ def execute(command):
 def fragment_file(src_dir):
     for i in os.listdir(src_dir):
 
-        cmd = [os.path.join(config.bento4_path, "mp4fragment"),
+        cmd = [os.path.join(config.bento4_path, 'bin', "mp4fragment"),
                os.path.join(src_dir, i), os.path.join(src_dir, 'fragged_%s' % i)]
         #print(cmd)
         p = subprocess.Popen(cmd)
@@ -179,7 +179,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     final_xml.remove(final_xml[0])
 
-    with open(os.path.join(fin_folder, 'rashavas.mpd'), 'w') as g:
+    with open(os.path.join(fin_folder, 'rashavas.mpd'), 'wb') as g:
         g.write(etree.tostring(final_xml))
 
     # ipdb.set_trace()
