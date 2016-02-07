@@ -78,7 +78,7 @@ def hls_segments(src, out_dir):
                os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
         p = subprocess.Popen(cmd)
         p.wait()
-        m3u8.append(fmt_.format(bw=int(speed) * 1024))
+        m3u8.append(fmt_.format(bw=int(float(speed) * 1024)))
         m3u8.append('{speed}/stream.m3u8'.format(speed=speed))
         if p.returncode != 0:
             os.chdir(wdir)
