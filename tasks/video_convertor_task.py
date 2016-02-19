@@ -50,7 +50,7 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
-                    'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), '-m',
+                                                       'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), '-m',
            str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
     p = subprocess.Popen(cmd)
     p.wait()
@@ -68,10 +68,10 @@ def hls_segments(src, out_dir):
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
 
     for f in files:
-        filename      = os.path.basename(f)
-        speed         = filename.replace('.mp4', '').replace('video_', '')
-        fin_dir       = os.path.join(out_dir, speed)
-        wdir          = os.getcwd()
+        filename = os.path.basename(f)
+        speed = filename.replace('.mp4', '').replace('video_', '')
+        fin_dir = os.path.join(out_dir, speed)
+        wdir = os.getcwd()
         os.mkdir(fin_dir)
         os.chdir(fin_dir)
         cmd = ['nice', '-n', '20',
@@ -96,7 +96,7 @@ def create_segments(src):
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                    'mp4-dash.py'), '-f', "--mpd-name=" + mpd_file,
+                                            'mp4-dash.py'), '-f', "--mpd-name=" + mpd_file,
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])

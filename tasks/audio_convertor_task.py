@@ -31,7 +31,7 @@ def fragment_file(src_dir):
 
         cmd = [os.path.join(config.bento4_path, 'bin', "mp4fragment"),
                os.path.join(src_dir, i), os.path.join(src_dir, 'fragged_%s' % i)]
-        #print(cmd)
+        # print(cmd)
         p = subprocess.Popen(cmd)
         p.wait()
         if p.returncode == 0:
@@ -152,25 +152,23 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         store(ticket, status)
         return
 
-
-
     fin_folder = os.path.join(config.work_folder_tmp, uuid.uuid4().hex)
     os.mkdir(fin_folder)
     bw_ranges = list(set([min_bw + i * (min_bw + max_bw) /
-                 bw_count for i in range(bw_count)]))
+                          bw_count for i in range(bw_count)]))
     mpd_file = []
     status.status = 'AGRIGATION STARTED'
     store(ticket, status)
 
     for i in bw_ranges:
         _tmp = os.path.join(fin_folder, str(i))
-        #if not os.path.isdir(_tmp):
+        # if not os.path.isdir(_tmp):
         #    os.mkdir(_tmp)
         os.rename(os.path.join(
             seg, 'fragged_{bitrate}.mp4_out'.format(bitrate=i)), _tmp)
         with open(os.path.join(_tmp, 'stream.mpd')) as f:
             mpd_file.append([i, f.read()])
-        #shutil.rmtree(_tmp)
+        # shutil.rmtree(_tmp)
     final_xml = etree.fromstring(mpd_file[0][1])
     repr_sec = final_xml[1][1][1]
     repr_sec.attrib['id'] = os.path.join(
@@ -199,8 +197,8 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     store(ticket, status)
     shutil.move(fin_folder, os.path.join(config.out_folder, ticket))
 
-    #shutil.rmtree(res)
-    #os.remove(frag)
+    # shutil.rmtree(res)
+    # os.remove(frag)
 
     status.status = 'SUCCESS'
     status.info = dict(

@@ -24,4 +24,4 @@ admin_password = 'why_321'
 salt = 'Do_of_09m'
 
 if not os.path.isdir(out_folder):
-	os.makedirs(out_folder)
+    os.makedirs(out_folder)
