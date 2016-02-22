@@ -15,13 +15,15 @@ app.config_from_object('tasksConfig')
 
 REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379)
 
-work_folder_tmp = os.path.abspath("video_tmp")
-input_folder = os.path.abspath("video_tmp")
+work_folder_tmp = '/storage/video_tmp'
+input_folder = '/storage/video_tmp'
 out_folder = '/storage/streaming'
+
+for each in [work_folder_tmp, input_folder, out_folder]:
+    if not os.path.isdir(each):
+        os.makedirs(each)
+
 bento4_path = '/Bento4'
 admin_user = 'root'
 admin_password = 'why_321'
-salt = 'Do_of_09m'
-
-if not os.path.isdir(out_folder):
-    os.makedirs(out_folder)
+salt = 'Doo_5b9m'
