@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd /streaming
-celery -A tasks worker --concurrency 2 -l info
+celery -A tasks worker --concurrency 8 -l info
