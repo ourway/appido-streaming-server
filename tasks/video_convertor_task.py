@@ -32,12 +32,14 @@ class Progress(object):
     bitrate = None
 
 
-def fragment_file(src):
+def fragment_file(src, fd=8000):
     tmp_file = uuid.uuid4().hex
     fullpath = "{tmp}/{file}.mp4".format(
         tmp=config.work_folder_tmp, file=tmp_file)
     cmd = ["nice", os.path.join(config.bento4_path, 'bin',
-                                "mp4fragment"), src, fullpath]
+                                "mp4fragment"), '--index', 
+                                #'--fragment-duration', str(fd), 
+                                src, fullpath]
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -46,12 +48,13 @@ def fragment_file(src):
         raise ValueError('ERROR on fragmentation')
 
 
-def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=5):
+def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name=uuid.uuid4().hex)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
-                                                       'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), '-m',
-           str(min_bw), '-n', str(max_bw), src, '-o', out_dir]
+                                                       'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
+                                                       #'-m', str(min_bw), '-n', str(max_bw),
+                                                       '--select-streams', '0,1', src, '-o', out_dir]
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -74,8 +77,7 @@ def hls_segments(src, out_dir):
         wdir = os.getcwd()
         os.mkdir(fin_dir)
         os.chdir(fin_dir)
-        cmd = ['nice', '-n', '20',
-               os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
+        cmd = ['nice', os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
         p = subprocess.Popen(cmd)
         p.wait()
         m3u8.append(fmt_.format(bw=int(float(speed) * 1024)))
@@ -96,10 +98,11 @@ def create_segments(src):
                                         dir_name=uuid.uuid4().hex)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                                            'mp4-dash.py'), '-f', "--mpd-name=" + mpd_file,
+                                            'mp4-dash.py'), '-f', '--use-segment-timeline', '--use-segment-list', "--mpd-name=" + mpd_file,
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
+    print(cmd)
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
@@ -121,7 +124,7 @@ def create_segments(src):
 
 
 @app.task
-def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
+def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
                   webhook=None, abspath=False, url=True):
     status = Status()
     if abspath:

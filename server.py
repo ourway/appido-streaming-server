@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 
 
-__authors = 'Masoud Mazarei and Farsheed Ashouri'
-
+__author = 'Farsheed Ashouri. Thanks to msd for the original idea'
 __copyright = 'Rashavas telecom @ 2015-2016'
-
-__description = '''
-Thanks for masoud for doing all hard work
-'''
 
 
 #import ipdb
@@ -18,8 +13,10 @@ import uuid
 #from convert_task import convert
 import tasks
 import config
-from utils import restore
 import requests
+
+
+#app = config.app
 
 application = application = bottle.Bottle()
 
