@@ -43,6 +43,8 @@ def fragment_file(src_dir):
 
 def hls_segments(src, out_dir):
     out_dir = os.path.join(out_dir, 'hls')
+    if os.path.isdir(out_dir):
+        shutil.rmtree(out_dir)
     os.mkdir(out_dir)
     files = glob.glob(src + '/frag*mp4')
     m3u8 = ['#EXTM3U']
@@ -72,11 +74,13 @@ def hls_segments(src, out_dir):
     return out_dir
 
 
-def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
+def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10):
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
-                                        dir_name=uuid.uuid4().hex)
+                                        dir_name='%s-resulations'%fmd5)
+    if os.path.isdir(out_dir):
+        shutil.rmtree(out_dir)
     os.mkdir(out_dir)
     cmd = ['ffmpeg', '-i', src]
     for i in [['-vn', '-b:a', '%sk' % x, "{out_dir}/{filename}.mp4".format(out_dir=out_dir, filename=x)] for x in bw_ranges]:
@@ -90,11 +94,11 @@ def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
         return None
 
 
-def create_segments(src_dir):
+def create_segments(src_dir, fmd5):
     #import ipdb
     # ipdb.set_trace()
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
-                                        dir_name=uuid.uuid4().hex)
+                                        dir_name='%s-segments'%fmd5)
     for i in glob.glob(os.path.join(src_dir, 'frag*mp4')):
         cmd = ["python2", os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
                "--exec-dir=%s/bin" % config.bento4_path, i, '-o', i + '_out']
@@ -123,23 +127,22 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     fmd5 = md5_for_file(fullfilename)
     status.status = 'STARTED'
     store(ticket, status)
-    store(fmd5, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw))
-    res = create_different_resulations(fullfilename, min_bw, max_bw, bw_count)
+    res = create_different_resulations(fullfilename, fmd5, min_bw, max_bw, bw_count)
     print(("+" * 20))
     print(("different resulation dir :", res))
     print(("+" * 20))
     if res == None:
         status.status = 'FAILED - RESULATION STEP '
         store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
         return
     status.status = 'FRAGMENTATION STARTED'
     store(ticket, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     frag = fragment_file(res)
-    print(("-" * 30))
-    print(("fragmented path:", frag))
-    print(("-" * 30))
 
     if frag == None:
         status.status = 'FAILED - FRAGMENTATION STEP'
@@ -147,20 +150,25 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         return
     status.status = 'SEGMENTATION STARTED'
     store(ticket, status)
-    seg = create_segments(frag)
+    store(fmd5, dict(ticket=ticket, status=status))
+    seg = create_segments(frag, fmd5)
     # ipdb.set_trace()
     if not seg:
         status.status = 'FAILED - SEGMENTATION FAILED'
         store(ticket, status)
         return
 
-    fin_folder = os.path.join(config.work_folder_tmp, uuid.uuid4().hex)
+    fin_folder = os.path.join(config.work_folder_tmp, '%s-stream'%fmd5)
+
+    if os.path.isdir(fin_folder):
+        shutil.rmtree(fin_folder)
     os.mkdir(fin_folder)
     bw_ranges = list(set([min_bw + i * (min_bw + max_bw) /
                           bw_count for i in range(bw_count)]))
     mpd_file = []
     status.status = 'AGRIGATION STARTED'
     store(ticket, status)
+    store(fmd5, dict(ticket=ticket, status=status))
 
     for i in bw_ranges:
         _tmp = os.path.join(fin_folder, str(i))
@@ -193,10 +201,12 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     if hls_segments(frag, fin_folder) is None:
         status.status = 'creation HLS Stream Failed'
         store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
         exit(1)
 
     status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
     store(ticket, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     shutil.move(fin_folder, os.path.join(config.out_folder, ticket))
 
     # shutil.rmtree(res)
@@ -208,7 +218,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
     )
     store(ticket, status)
-    store(fmd5, status)
+    store(fmd5, dict(ticket=ticket, status=status))
     if webhook:
         try:
             requests.post(webhook)

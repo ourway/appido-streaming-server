@@ -33,13 +33,14 @@ class Progress(object):
     bitrate = None
 
 
-def fragment_file(src, fd=8000):
-    tmp_file = uuid.uuid4().hex
+def fragment_file(src, fmd5):
+    tmp_file =fmd5 + '-fragment.mp4'
     fullpath = "{tmp}/{file}.mp4".format(
         tmp=config.work_folder_tmp, file=tmp_file)
     cmd = ["nice", os.path.join(config.bento4_path, 'bin',
-                                "mp4fragment"), '--index', 
-                                '--fragment-duration', str(fd), 
+                                "mp4fragment"),
+                                #'--index', 
+                                #'--fragment-duration', str(fd), 
                                 src, fullpath]
     p = subprocess.Popen(cmd)
     p.wait()
@@ -49,9 +50,9 @@ def fragment_file(src, fd=8000):
         raise ValueError('ERROR on fragmentation')
 
 
-def create_different_resulations(src, min_bw=64, max_bw=1024, bw_count=10):
+def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
-                                        dir_name=uuid.uuid4().hex)
+                                        dir_name='%s-resulations'%fmd5)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                        'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
                                                        '-m', str(min_bw), '-n', str(max_bw),
@@ -94,12 +95,12 @@ def hls_segments(src, out_dir):
     return out_dir
 
 
-def create_segments(src):
+def create_segments(src, fmd5):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
-                                        dir_name=uuid.uuid4().hex)
+                                        dir_name='%s-segments'%fmd5)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                                            'mp4-dash.py'), '-f', '-v', '--use-segment-timeline', "--mpd-name=" + mpd_file, '--use-segment-list', 
+                                            'mp4-dash.py'), '-f', '-v', "--mpd-name=" + mpd_file, 
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
@@ -144,35 +145,38 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     status.status = 'FRAGMENTATION'
     store(ticket, status)
     store(fmd5, dict(ticket=ticket, status=status))
-    frag = fragment_file(fullfilename)
+    frag = fragment_file(fullfilename, fmd5)
     if frag == None:
         status.status = 'FAILED'
         status.info = 'fragmantation failed'
         store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
         return
     status.status = 'RESULATION PROCESS'
     status.info = 'MAKE {count} resulations from {min} to {max}'.format(
         count=bw_count, min=min_bw, max=max_bw)
     store(ticket, status)
-    res = create_different_resulations(frag, min_bw, max_bw, bw_count)
+    store(fmd5, dict(ticket=ticket, status=status))
+    res = create_different_resulations(frag, fmd5,  min_bw, max_bw, bw_count)
     if res == None:
         status.status = 'FAILED'
         status.info = 'resulations steps failed'
         store(ticket, status)
         return
     status.status = 'SEGMENTATION STARTED'
-    seg = create_segments(res)
+    seg = create_segments(res, fmd5)
     if not seg:
         status.status = 'FAILED'
         status.info = 'segmentation failed'
         store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
         return
 
     # cleanup
     shutil.rmtree(res)
     os.remove(frag)
 
-    fin_folder = "{dir}/{file}".format(dir=config.out_folder, file=ticket)
+    fin_folder = "{dir}/{file}".format(dir=config.out_folder, file='%s-stream'%fmd5)
     try:
         status.status = 'PREPARING'
         status.info = 'Moving files to final folders'
@@ -186,8 +190,8 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file='%s-stream'%fmd5),
+        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file='%s-stream'%fmd5),
     )
     store(ticket, status)
     store(fmd5, dict(ticket=ticket, status=status))
