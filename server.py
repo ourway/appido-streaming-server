@@ -140,7 +140,8 @@ def media_add_path():
                 old_ticket = remd5.get('ticket')
                 if old_ticket and get_key(old_ticket)['result']:
                     logger.error('file with same md5 available. ticket: %s'%old_ticket)
-                    return dict(message='Available', info=get_key(old_ticket)['result'], ticket=old_ticket)
+                    return dict(message='Available', info=get_key(old_ticket)['result'],
+                            ticket=old_ticket)
         if _format == 'video':
             task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
                                              abspath=filepath != None, url=url != None)

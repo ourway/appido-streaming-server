@@ -6,6 +6,7 @@ from config import salt, input_folder
 import os
 import requests
 import hashlib
+import datetime
 
 
 class Status(object):
@@ -14,11 +15,12 @@ class Status(object):
     message = None
     info = None
 
-
 def store(key, obj):
     """Store a complex object in redis"""
-    r.set(salt + key, json.dumps(obj))
-
+    _obj = json.dumps(obj)
+    load_ = json.loads(_obj)
+    load_['datetime'] = datetime.datetime.utcnow()
+    r.set(salt + key, json.dumps(load_))
 
 def restore(key):
     """Get a complex object from redis"""

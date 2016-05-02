@@ -53,6 +53,8 @@ def fragment_file(src, fmd5):
 def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10):
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name='%s-resulations'%fmd5)
+    if os.path.isdir(out_dir):
+        shutil.rmtree(out_dir)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                        'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
                                                        '-m', str(min_bw), '-n', str(max_bw),
