@@ -15,3 +15,6 @@ config.py
 Bento4/
 ffmpeg/
 *.gz
+*.mp4
+*.dat
+*.dir

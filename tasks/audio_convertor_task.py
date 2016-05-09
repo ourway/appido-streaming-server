@@ -207,15 +207,15 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
     store(ticket, status)
     store(fmd5, dict(ticket=ticket, status=status))
-    shutil.move(fin_folder, os.path.join(config.out_folder, ticket))
+    shutil.move(fin_folder, os.path.join(config.out_folder, '%s-stream'%fmd5))
 
     # shutil.rmtree(res)
     # os.remove(frag)
 
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file=ticket),
-        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file=ticket),
+        mpd='/storage/streaming/{file}-stream/rashavas.mpd'.format(file=fmd5),
+        m3u8='/storage/streaming/{file}-stream/hls/rashavas.m3u8'.format(file=fmd5),
     )
     store(ticket, status)
     store(fmd5, dict(ticket=ticket, status=status))
