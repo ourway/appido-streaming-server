@@ -8,6 +8,7 @@ import glob
 import copy
 from lxml import etree
 import shutil
+import logging
 from utils import store, restore, md5_for_file, Status
 import config
 from config import app
@@ -17,6 +18,8 @@ from utils import download_file
 import re
 #import ipdb
 r = config.REDIS
+
+logger = logging.getLogger(__name__)
 
 
 def execute(command):
@@ -45,7 +48,10 @@ def hls_segments(src, out_dir):
     out_dir = os.path.join(out_dir, 'hls')
     if os.path.isdir(out_dir):
         shutil.rmtree(out_dir)
-    os.mkdir(out_dir)
+    try:
+        os.makedirs(out_dir)
+    except (FileExistsError) as e:
+        logger.debug(e)
     files = glob.glob(src + '/frag*mp4')
     m3u8 = ['#EXTM3U']
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
@@ -55,7 +61,11 @@ def hls_segments(src, out_dir):
         speed = filename.replace('.mp4', '').replace('fragged_', '')
         fin_dir = os.path.join(out_dir, speed)
         wdir = os.getcwd()
-        os.mkdir(fin_dir)
+        try:
+            os.makedirs(fin_dir)
+        except (FileExistsError) as e:
+            logger.debug(e)
+
         os.chdir(fin_dir)
         cmd = ['nice', '-n', '20',
                os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
@@ -81,7 +91,10 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10)
                                         dir_name='%s-resulations'%fmd5)
     if os.path.isdir(out_dir):
         shutil.rmtree(out_dir)
-    os.mkdir(out_dir)
+    try:
+        os.mkdir(out_dir)
+    except (FileExistsError) as e:
+        logger.debug(e)
     cmd = ['ffmpeg', '-i', src]
     for i in [['-vn', '-b:a', '%sk' % x, "{out_dir}/{filename}.mp4".format(out_dir=out_dir, filename=x)] for x in bw_ranges]:
         cmd.extend(i)

@@ -12,10 +12,13 @@ from utils import store, restore, md5_for_file, Status
 import requests
 from requests.exceptions import ConnectionError
 import config
+import logging
 from config import app
 import re
 from utils import download_file
 import hashlib
+
+logger = logging.getLogger(__name__)
 
 r = config.REDIS
 
@@ -69,7 +72,10 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
 
 def hls_segments(src, out_dir):
     out_dir = os.path.join(out_dir, 'hls')
-    os.mkdir(out_dir)
+    try:
+        os.makedirs(out_dir)
+    except (FileExistsError) as e:
+        logger.debug(e)
     files = glob.glob(src + '/*mp4')
     m3u8 = ['#EXTM3U']
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
@@ -79,7 +85,10 @@ def hls_segments(src, out_dir):
         speed = filename.replace('.mp4', '').replace('video_', '')
         fin_dir = os.path.join(out_dir, speed)
         wdir = os.getcwd()
-        os.mkdir(fin_dir)
+        try:
+            os.mkdir(fin_dir)
+        except (FileExistsError) as e:
+            logger.debug(e)
         os.chdir(fin_dir)
         cmd = ['nice', os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
         p = subprocess.Popen(cmd)
