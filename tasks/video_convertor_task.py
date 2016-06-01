@@ -15,10 +15,14 @@ import config
 import logging
 from config import app
 import re
+import json
 from utils import download_file
 import hashlib
 
 logger = logging.getLogger(__name__)
+logger.addHandler(config.smtp_handler)
+
+
 
 r = config.REDIS
 
@@ -37,6 +41,8 @@ class Progress(object):
 
 
 def fragment_file(src, fmd5):
+    s = time.time()
+    logger.debug('Started fragmentation of %s' % src)
     tmp_file =fmd5 + '-fragment.mp4'
     fullpath = "{tmp}/{file}.mp4".format(
         tmp=config.work_folder_tmp, file=tmp_file)
@@ -47,16 +53,20 @@ def fragment_file(src, fmd5):
                                 src, fullpath]
     p = subprocess.Popen(cmd)
     p.wait()
+    #import ipdb;ipdb.set_trace()
     if p.returncode == 0:
+        logger.debug('Fragmentation of %s ended in %f(3) seconds' % (src, time.time()-s))
         return fullpath
     else:
-        raise ValueError('ERROR on fragmentation')
-
+        logger.error('ERROR on fragmentation of file: %s' % src)
 
 def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10):
+    s = time.time()
+    logger.info('Started resulations process of %s' % src)
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name='%s-resulations'%fmd5)
     if os.path.isdir(out_dir):
+        #import ipdb;ipdb.set_trace()
         shutil.rmtree(out_dir)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                        'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
@@ -65,12 +75,14 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
+        logger.debug('Resulations process of %s ended in %f(3) seconds' % (src, time.time()-s))
         return out_dir
     else:
-        raise ValueError('ERROR on craete different resulations')
-
+        logger.error('ERROR on craete different resulations for file %s' % src)
 
 def hls_segments(src, out_dir):
+    s = time.time()
+    logger.debug('Started HLS segments process of %s' % src)
     out_dir = os.path.join(out_dir, 'hls')
     try:
         os.makedirs(out_dir)
@@ -79,7 +91,6 @@ def hls_segments(src, out_dir):
     files = glob.glob(src + '/*mp4')
     m3u8 = ['#EXTM3U']
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
-
     for f in files:
         filename = os.path.basename(f)
         speed = filename.replace('.mp4', '').replace('video_', '')
@@ -96,18 +107,19 @@ def hls_segments(src, out_dir):
         m3u8.append(fmt_.format(bw=int(float(speed) * 1024)))
         m3u8.append('{speed}/stream.m3u8'.format(speed=speed))
         if p.returncode != 0:
-            os.chdir(wdir)
             return None
-        else:
-            os.chdir(wdir)
+    os.chdir(wdir)
     rashavas_m3u8 = open(os.path.join(out_dir, 'rashavas.m3u8'), 'w')
     rashavas_m3u8.write('\r\n'.join(m3u8))
+    logger.debug('HLS segments process of %s ended in %f(3) seconds' % (src, time.time()-s))
     rashavas_m3u8.close()
     return out_dir
 
 
 def create_segments(src, fmd5):
-    out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
+    s=time.time()
+    logger.debug('Started segments process of %s' % src)
+    out_dir = "{tmp}/{dir_name}".format(tmp=config.out_folder,
                                         dir_name='%s-segments'%fmd5)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
@@ -130,14 +142,16 @@ def create_segments(src, fmd5):
         f.write(etree.tostring(tree))
         f.close()
         hls_segments(src, out_dir)
+        logger.debug('Segments process of %s ended in %f(3) seconds' % (src, time.time()-s))
         return out_dir
     else:
         raise ValueError('ERROR on create segments')
 
-
 @app.task
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
                   webhook=None, abspath=False, url=True):
+    s=time.time()
+    logger.debug('Started streaming process of %s' % filename)
     status = Status()
     if abspath:
         fullfilename = filename
@@ -187,22 +201,10 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     shutil.rmtree(res)
     os.remove(frag)
 
-    fin_folder = "{dir}/{file}".format(dir=config.out_folder, file='%s-stream'%fmd5)
-    try:
-        status.status = 'PREPARING'
-        status.info = 'Moving files to final folders'
-        store(ticket, status)
-        shutil.move(seg, fin_folder)
-    except:
-        status.status = 'FAILED'
-        status.info = 'failed in preparing final folders'
-        store(ticket, status)
-        return
-
     status.status = 'SUCCESS'
     status.info = dict(
-        mpd='/storage/streaming/{file}/rashavas.mpd'.format(file='%s-stream'%fmd5),
-        m3u8='/storage/streaming/{file}/hls/rashavas.m3u8'.format(file='%s-stream'%fmd5),
+        mpd='{of}/{file}/rashavas.mpd'.format(file='%s-stream'%fmd5, of=config.out_folder),
+        m3u8='{of}/{file}/hls/rashavas.m3u8'.format(file='%s-stream'%fmd5, of=config.out_folder),
     )
     store(ticket, status)
     store(fmd5, dict(ticket=ticket, status=status))
@@ -211,4 +213,6 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
             requests.post(webhook)
         except ConnectionError:
             pass
+
+    logger.debug('Straming process of %s ended in %f(3) seconds' % (filename, time.time()-s))
     return 'OK'

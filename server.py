@@ -39,7 +39,7 @@ def get_key(key):
     return dict(result=restore(key))
 
 
-@application.get('/streaming/api/revoke/<task_id>')
+@application.post('/streaming/api/revoke/<task_id>')
 def revoke(task_id):
     config.app.control.revoke(task_id)
     remove(task_id)
@@ -121,6 +121,8 @@ def audio_upload():
 def media_add_path():
     fpath = None
 #        ipdb.set_trace()
+    if not request.json:
+        abort(400)
     filepath = request.json.get('filepath', None)
     _format = request.json.get('format', 'video')
     url = request.json.get('url', None)

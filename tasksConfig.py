@@ -1,10 +1,6 @@
 
 
-REDIS_HOST = 'appido-redis'
-BROKER_URL = 'redis://%s:6379/10' % REDIS_HOST
 C_FORCE_ROOT = True
-CELERY_RESULT_BACKEND = 'redis://appido-redis:6379/11'
-BROKER_TRANSPORT_OPTIONS = {'fanout_patterns': True, 'fanout_prefix': True}
 
 
 # 7 days.
