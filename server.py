@@ -17,12 +17,17 @@ import config
 from utils import store, restore, remove,  md5_for_file
 import requests
 import logging
+from raven import Client
+from raven.contrib.bottle import Sentry
+
+client = Client('https://29b51be9165b4678a16d998c59141c10:e31e0e292ccf41c39251263cb318d202@sentry.appido.ir/6')
 logger = logging.getLogger(__name__)
 
 
 #app = config.app
 
-application = application = bottle.Bottle()
+application = bottle.Bottle()
+application.catchall = False
 
 
 @application.hook('after_request')
@@ -168,6 +173,11 @@ def media_add_path():
 @application.get('/streaming/ping')
 def hello():
     return dict(message='PONG')
+
+
+
+
+application = Sentry(application, client)
 
 
 if __name__ == '__main__':

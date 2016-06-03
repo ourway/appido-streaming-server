@@ -13,14 +13,14 @@ import requests
 from requests.exceptions import ConnectionError
 import config
 import logging
-from config import app
+from config import app, client
 import re
 import json
 from utils import download_file
 import hashlib
 
 logger = logging.getLogger(__name__)
-logger.addHandler(config.smtp_handler)
+#logger.addHandler(config.smtp_handler)
 
 
 
@@ -42,7 +42,6 @@ class Progress(object):
 
 def fragment_file(src, fmd5):
     s = time.time()
-    logger.debug('Started fragmentation of %s' % src)
     tmp_file =fmd5 + '-fragment.mp4'
     fullpath = "{tmp}/{file}.mp4".format(
         tmp=config.work_folder_tmp, file=tmp_file)
@@ -55,14 +54,13 @@ def fragment_file(src, fmd5):
     p.wait()
     #import ipdb;ipdb.set_trace()
     if p.returncode == 0:
-        logger.debug('Fragmentation of %s ended in %f(3) seconds' % (src, time.time()-s))
         return fullpath
     else:
-        logger.error('ERROR on fragmentation of file: %s' % src)
+        client.captureMessage('ERROR on fragmentation of file: %s' % src)
 
 def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10):
     s = time.time()
-    logger.info('Started resulations process of %s' % src)
+    #logger.info('Started resulations process of %s' % src)
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name='%s-resulations'%fmd5)
     if os.path.isdir(out_dir):
@@ -75,19 +73,17 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
-        logger.debug('Resulations process of %s ended in %f(3) seconds' % (src, time.time()-s))
         return out_dir
     else:
-        logger.error('ERROR on craete different resulations for file %s' % src)
+        client.captureMessage('ERROR on craete different resulations for file %s' % src)
 
 def hls_segments(src, out_dir):
     s = time.time()
-    logger.debug('Started HLS segments process of %s' % src)
     out_dir = os.path.join(out_dir, 'hls')
     try:
         os.makedirs(out_dir)
     except (FileExistsError) as e:
-        logger.debug(e)
+        client.captureException()
     files = glob.glob(src + '/*mp4')
     m3u8 = ['#EXTM3U']
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
@@ -99,7 +95,7 @@ def hls_segments(src, out_dir):
         try:
             os.mkdir(fin_dir)
         except (FileExistsError) as e:
-            logger.debug(e)
+            client.captureException()
         os.chdir(fin_dir)
         cmd = ['nice', os.path.join(config.bento4_path, 'bin', 'mp42hls'), f]
         p = subprocess.Popen(cmd)
@@ -111,14 +107,12 @@ def hls_segments(src, out_dir):
     os.chdir(wdir)
     rashavas_m3u8 = open(os.path.join(out_dir, 'rashavas.m3u8'), 'w')
     rashavas_m3u8.write('\r\n'.join(m3u8))
-    logger.debug('HLS segments process of %s ended in %f(3) seconds' % (src, time.time()-s))
     rashavas_m3u8.close()
     return out_dir
 
 
 def create_segments(src, fmd5):
     s=time.time()
-    logger.debug('Started segments process of %s' % src)
     out_dir = "{tmp}/{dir_name}".format(tmp=config.out_folder,
                                         dir_name='%s-segments'%fmd5)
     mpd_file = 'rashavas.mpd'
@@ -142,10 +136,9 @@ def create_segments(src, fmd5):
         f.write(etree.tostring(tree))
         f.close()
         hls_segments(src, out_dir)
-        logger.debug('Segments process of %s ended in %f(3) seconds' % (src, time.time()-s))
         return out_dir
     else:
-        raise ValueError('ERROR on create segments')
+        client.captureMessage('ERROR on create segments of %s' % src)
 
 @app.task
 def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
@@ -212,7 +205,7 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         try:
             requests.post(webhook)
         except ConnectionError:
-            pass
+            client.captureException()
 
     logger.debug('Straming process of %s ended in %f(3) seconds' % (filename, time.time()-s))
     return 'OK'

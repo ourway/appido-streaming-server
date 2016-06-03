@@ -11,7 +11,7 @@ import shutil
 import logging
 from utils import store, restore, md5_for_file, Status
 import config
-from config import app
+from config import app, client
 import requests
 from requests.exceptions import ConnectionError
 from utils import download_file
@@ -20,6 +20,8 @@ import re
 r = config.REDIS
 
 logger = logging.getLogger(__name__)
+#logger.addHandler(config.smtp_handler)
+
 
 
 def execute(command):
@@ -40,6 +42,7 @@ def fragment_file(src_dir):
         if p.returncode == 0:
             pass
         else:
+            client.captureMessage('Fragmentation process of %s failed' % src_dir)
             return None
     return src_dir
 
@@ -51,7 +54,7 @@ def hls_segments(src, out_dir):
     try:
         os.makedirs(out_dir)
     except (FileExistsError) as e:
-        logger.debug(e)
+        client.captureException()
     files = glob.glob(src + '/frag*mp4')
     m3u8 = ['#EXTM3U']
     fmt_ = '#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH={bw}'
@@ -64,7 +67,7 @@ def hls_segments(src, out_dir):
         try:
             os.makedirs(fin_dir)
         except (FileExistsError) as e:
-            logger.debug(e)
+            client.captureException()
 
         os.chdir(fin_dir)
         cmd = ['nice', '-n', '20',
@@ -75,6 +78,7 @@ def hls_segments(src, out_dir):
         m3u8.append('{speed}/stream.m3u8'.format(speed=speed))
         if p.returncode != 0:
             os.chdir(wdir)
+            client.captureMessage('HLS segments process of %s failed' % src)
             return None
         else:
             os.chdir(wdir)
@@ -94,7 +98,7 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10)
     try:
         os.mkdir(out_dir)
     except (FileExistsError) as e:
-        logger.debug(e)
+        client.captureException()
     cmd = ['ffmpeg', '-i', src]
     for i in [['-vn', '-b:a', '%sk' % x, "{out_dir}/{filename}.mp4".format(out_dir=out_dir, filename=x)] for x in bw_ranges]:
         cmd.extend(i)
@@ -104,6 +108,7 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10)
     if p.returncode == 0:
         return out_dir
     else:
+        client.captureMessage('Resulations process of %s failed' % src)
         return None
 
 
@@ -117,17 +122,17 @@ def create_segments(src_dir, fmd5):
                "--exec-dir=%s/bin" % config.bento4_path, i, '-o', i + '_out']
         p = subprocess.Popen(cmd)
         p.wait()
-        if p.returncode == 0:
-            pass
-        else:
+        if p.returncode != 0:
+            client.captureMessage('Segments process of %s failed' % src_dir)
             return None
-
     return src_dir
 
 
 @app.task
 def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
                   webhook=None, abspath=False, url=True):
+    s = time.time()
+    logger.debug('Streaming process of %s started' % filename)
     status = Status()
     if abspath:
         fullfilename = filename
@@ -236,7 +241,8 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         try:
             requests.post(webhook)
         except ConnectionError:
-            pass
+            client.captureException()
+    logger.debug('Streaming process of %s ended in %f(3) seconds' % (filename, time.time()-s))
     return 'OK'
 
 
