@@ -50,7 +50,7 @@ def fragment_file(src_dir):
 def hls_segments(src, out_dir):
     out_dir = os.path.join(out_dir, 'hls')
     if os.path.isdir(out_dir):
-        shutil.rmtree(out_dir)
+        shutil.rmtree(out_dir, ignore_errors=True)
     try:
         os.makedirs(out_dir)
     except (FileExistsError) as e:
@@ -94,7 +94,7 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10)
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name='%s-resulations'%fmd5)
     if os.path.isdir(out_dir):
-        shutil.rmtree(out_dir)
+        shutil.rmtree(out_dir, ignore_errors=True)
     try:
         os.mkdir(out_dir)
     except (FileExistsError) as e:
@@ -179,7 +179,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     fin_folder = os.path.join(config.work_folder_tmp, '%s-stream'%fmd5)
 
     if os.path.isdir(fin_folder):
-        shutil.rmtree(fin_folder)
+        shutil.rmtree(fin_folder, ignore_errors=True)
     os.mkdir(fin_folder)
     bw_ranges = list(set([min_bw + i * (min_bw + max_bw) /
                           bw_count for i in range(bw_count)]))
@@ -196,7 +196,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
             seg, 'fragged_{bitrate}.mp4_out'.format(bitrate=i)), _tmp)
         with open(os.path.join(_tmp, 'stream.mpd')) as f:
             mpd_file.append([i, f.read()])
-        # shutil.rmtree(_tmp)
+        # shutil.rmtree(_tmp, ignore_errors=True)
     final_xml = etree.fromstring(mpd_file[0][1])
     repr_sec = final_xml[1][1][1]
     repr_sec.attrib['id'] = os.path.join(
@@ -227,7 +227,7 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
     store(fmd5, dict(ticket=ticket, status=status))
     shutil.move(fin_folder, os.path.join(config.out_folder, '%s-stream'%fmd5))
 
-    # shutil.rmtree(res)
+    # shutil.rmtree(res, ignore_errors=True)
     # os.remove(frag)
 
     status.status = 'SUCCESS'

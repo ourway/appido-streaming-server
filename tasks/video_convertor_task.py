@@ -64,8 +64,7 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
                                         dir_name='%s-resulations'%fmd5)
     if os.path.isdir(out_dir):
-        #import ipdb;ipdb.set_trace()
-        shutil.rmtree(out_dir)
+        shutil.rmtree(out_dir, ignore_errors=True)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
                                                        'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
                                                        '-m', str(min_bw), '-n', str(max_bw),
@@ -117,7 +116,10 @@ def create_segments(src, fmd5):
                                         dir_name='%s-segments'%fmd5)
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
-                                            'mp4-dash.py'), '-f', '-v', "--mpd-name=" + mpd_file, 
+                                            'mp4-dash.py'), '-f', '-v', 
+                                            #'--use-segment-list',
+                                            #'--use-segment-timeline',
+                                            "--mpd-name=" + mpd_file, 
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
     cmd.extend(["-o", out_dir])
@@ -183,6 +185,7 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         return
     status.status = 'SEGMENTATION STARTED'
     seg = create_segments(res, fmd5)
+    print('segments')
     if not seg:
         status.status = 'FAILED'
         status.info = 'segmentation failed'
@@ -191,7 +194,7 @@ def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
         return
 
     # cleanup
-    shutil.rmtree(res)
+    shutil.rmtree(res, ignore_errors=True)
     os.remove(frag)
 
     status.status = 'SUCCESS'
