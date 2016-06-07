@@ -66,7 +66,8 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
     if os.path.isdir(out_dir):
         shutil.rmtree(out_dir, ignore_errors=True)
     cmd = ['nice', '-n', '20', 'python2', os.path.join(config.bento4_path,
-                                                       'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), 
+                                                       'utils', 'mp4-dash-encode.py'), '-v', '-f', '-b', str(bw_count), '-d',
+                                                       #'--select-streams' , '0',
                                                        '-m', str(min_bw), '-n', str(max_bw),
                                                        src, '-o', out_dir]
     p = subprocess.Popen(cmd)
@@ -74,6 +75,7 @@ def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10
     if p.returncode == 0:
         return out_dir
     else:
+        print(cmd)
         client.captureMessage('ERROR on craete different resulations for file %s' % src)
 
 def hls_segments(src, out_dir):
@@ -117,8 +119,8 @@ def create_segments(src, fmd5):
     mpd_file = 'rashavas.mpd'
     cmd = ["nice", "python2",  os.path.join(config.bento4_path, 'utils',
                                             'mp4-dash.py'), '-f', '-v', 
-                                            #'--use-segment-list',
-                                            #'--use-segment-timeline',
+                                            '--use-segment-list',
+                                            '--use-segment-timeline',
                                             "--mpd-name=" + mpd_file, 
            "--exec-dir=%s/bin" % config.bento4_path]
     cmd.extend(glob.glob(src + "/*mp4"))
