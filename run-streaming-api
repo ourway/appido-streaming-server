@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#source /pypyenv/bin/activate
 cd /streaming
 export C_FORCE_ROOT="true"
 gunicorn server -w 4 -b :4000 -t 300

@@ -1,4 +1,5 @@
 #!/bin/bash
 
+#source /pypyenv/bin/activate
 cd /streaming
 celery -A tasks worker -l debug -S tasks.db

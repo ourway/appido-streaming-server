@@ -21,6 +21,7 @@ def store(key, obj):
     load_ = json.loads(_obj)
     load_['datetime'] = datetime.datetime.utcnow()
     r.set(salt + key, json.dumps(load_))
+    r.expire(salt + key, 24*3600)  # expire key
 
 def restore(key):
     """Get a complex object from redis"""

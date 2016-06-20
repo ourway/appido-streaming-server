@@ -130,6 +130,7 @@ def media_add_path():
         abort(400)
     filepath = request.json.get('filepath', None)
     _format = request.json.get('format', 'video')
+    correlator = request.json.get('correlator')
     url = request.json.get('url', None)
     webhook = request.json.get('webhook')
     logger.error('recived a request on %s'%filepath or url)
@@ -141,20 +142,30 @@ def media_add_path():
             fpath = url
         else:
             fpath = filepath
-            fmd5 = md5_for_file(fpath)
-            remd5 = restore(fmd5)
-            if remd5:
-                old_ticket = remd5.get('ticket')
-                if old_ticket and get_key(old_ticket)['result']:
-                    logger.error('file with same md5 available. ticket: %s'%old_ticket)
-                    return dict(message='Available', info=get_key(old_ticket)['result'],
-                            ticket=old_ticket)
+            #fmd5 = md5_for_file(fpath)
+            #remd5 = restore(fmd5)
+            #if remd5:
+            #    old_ticket = remd5.get('ticket')
+            #    if old_ticket and get_key(old_ticket)['result']:
+            #        logger.error('file with same md5 available. ticket: %s'%old_ticket)
+            #        return dict(message='Available', info=get_key(old_ticket)['result'],
+            #                ticket=old_ticket)
         if _format == 'video':
-            task = tasks.video_convert.delay(fpath, ticket, webhook=webhook,
-                                             abspath=filepath != None, url=url != None)
+            task = tasks.video_convert.delay(fpath,
+                                             ticket,
+                                             webhook=webhook,
+                                             abspath=filepath!=None,
+                                             url=url!=None,
+                                             correlator=correlator
+                                             )
         elif _format == 'audio':
-            task = tasks.audio_convert.delay(fpath, ticket, webhook=webhook,
-                                             abspath=filepath != None, url=url != None)
+            task = tasks.audio_convert.delay(fpath,
+                                             ticket,
+                                             webhook=webhook,
+                                             abspath=filepath!=None,
+                                             url=url!=None,
+                                             correlator=correlator
+                                             )
         response.status = 201
         return dict(message='Created', ticket=ticket, webhook=webhook,
                     task=str(task))

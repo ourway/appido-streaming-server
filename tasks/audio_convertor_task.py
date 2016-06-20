@@ -9,7 +9,7 @@ import copy
 from lxml import etree
 import shutil
 import logging
-from utils import store, restore, md5_for_file, Status
+from utils import store, restore, md5_for_file, Status, store
 import config
 from config import app, client
 import requests
@@ -130,12 +130,16 @@ def create_segments(src_dir, fmd5):
 
 @app.task
 def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
-                  webhook=None, abspath=False, url=True):
+                  webhook=None, abspath=False, url=True, correlator=None):
+
     s = time.time()
     logger.debug('Streaming process of %s started' % filename)
     status = Status()
     if abspath:
-        fullfilename = filename
+        '''I am going to copy the file, cause the original file might be deleted by client'''
+        tmpfilepath=os.path.join(config.work_folder_tmp, '_tmp' + os.path.basename(filename))
+        shutil.copyfile(filename, tmpfilepath)
+        fullfilename = tmpfilepath
     elif url:
         fullfilename = download_file(filename, ticket)
     else:
@@ -143,107 +147,141 @@ def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
                                              file=filename)
 
     fmd5 = md5_for_file(fullfilename)
-    status.status = 'STARTED'
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-    r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
-        count=bw_count, min=min_bw, max=max_bw))
-    res = create_different_resulations(fullfilename, fmd5, min_bw, max_bw, bw_count)
-    print(("+" * 20))
-    print(("different resulation dir :", res))
-    print(("+" * 20))
-    if res == None:
-        status.status = 'FAILED - RESULATION STEP '
+    lockKey = 'STMSERVER_LOCK_'+ fmd5
+    if not r.get(lockKey):
+        r.set(lockKey, 'LOCK')
+        r.expire(lockKey, 7200)
+
+
+
+        target_mpd='{of}/{file}/rashavas.mpd'.format(file='%s-stream'%fmd5, of=config.out_folder)
+        target_m3u8='{of}/{file}/hls/rashavas.m3u8'.format(file='%s-stream'%fmd5, of=config.out_folder)
+     
+
+        if os.path.isfile(target_mpd) and os.path.isfile(target_m3u8):
+            status.status = 'Ready'
+            if correlator: r.set(correlator, status.status)
+            store(ticket, status)
+            status.info = dict(
+                mpd=target_mpd,
+               m3u8=target_m3u8,
+            )
+            store(fmd5, dict(ticket=ticket, status=status))
+            return status
+     
+     
+        status.status = 'STARTED'
+        if correlator: r.set(correlator, status.status)
         store(ticket, status)
         store(fmd5, dict(ticket=ticket, status=status))
-        return
-    status.status = 'FRAGMENTATION STARTED'
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-    frag = fragment_file(res)
-
-    if frag == None:
-        status.status = 'FAILED - FRAGMENTATION STEP'
-        store(ticket, status)
-        return
-    status.status = 'SEGMENTATION STARTED'
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-    seg = create_segments(frag, fmd5)
-    # ipdb.set_trace()
-    if not seg:
-        status.status = 'FAILED - SEGMENTATION FAILED'
-        store(ticket, status)
-        return
-
-    fin_folder = os.path.join(config.work_folder_tmp, '%s-stream'%fmd5)
-
-    if os.path.isdir(fin_folder):
-        shutil.rmtree(fin_folder, ignore_errors=True)
-    os.mkdir(fin_folder)
-    bw_ranges = list(set([min_bw + i * (min_bw + max_bw) /
-                          bw_count for i in range(bw_count)]))
-    mpd_file = []
-    status.status = 'AGRIGATION STARTED'
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-
-    for i in bw_ranges:
-        _tmp = os.path.join(fin_folder, str(i))
-        # if not os.path.isdir(_tmp):
-        #    os.mkdir(_tmp)
-        os.rename(os.path.join(
-            seg, 'fragged_{bitrate}.mp4_out'.format(bitrate=i)), _tmp)
-        with open(os.path.join(_tmp, 'stream.mpd')) as f:
-            mpd_file.append([i, f.read()])
-        # shutil.rmtree(_tmp, ignore_errors=True)
-    final_xml = etree.fromstring(mpd_file[0][1])
-    repr_sec = final_xml[1][1][1]
-    repr_sec.attrib['id'] = os.path.join(
-        str(mpd_file[0][0]), repr_sec.attrib['id'])
-    for i in range(1, len(mpd_file)):
-        _tmpxml = etree.fromstring(mpd_file[i][1])
-        rpsec = _tmpxml[1][1][1]
-        rpsec.attrib['id'] = os.path.join(
-            str(mpd_file[i][0]), rpsec.attrib['id'])
-        (final_xml[1][1]).append(rpsec)
-
-    final_xml.remove(final_xml[0])
-
-    with open(os.path.join(fin_folder, 'rashavas.mpd'), 'wb') as g:
-        g.write(etree.tostring(final_xml))
-
-    # ipdb.set_trace()
-    status.status = 'HLS Stream creation Started'
-    store(ticket, status)
-    if hls_segments(frag, fin_folder) is None:
-        status.status = 'creation HLS Stream Failed'
+        r.set(ticket, 'MAKE {count} resulations from {min} to {max}'.format(
+            count=bw_count, min=min_bw, max=max_bw))
+        res = create_different_resulations(fullfilename, fmd5, min_bw, max_bw, bw_count)
+        print(("+" * 20))
+        print(("different resulation dir :", res))
+        print(("+" * 20))
+        if res == None:
+            status.status = 'FAILED - RESULATION STEP '
+            if correlator: r.set(correlator, status.status)
+            store(ticket, status)
+            store(fmd5, dict(ticket=ticket, status=status))
+            return
+        status.status = 'FRAGMENTATION STARTED'
+        if correlator: r.set(correlator, status.status)
         store(ticket, status)
         store(fmd5, dict(ticket=ticket, status=status))
-        exit(1)
+        frag = fragment_file(res)
 
-    status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-    shutil.move(fin_folder, os.path.join(config.out_folder, '%s-stream'%fmd5))
+        if frag == None:
+            status.status = 'FAILED - FRAGMENTATION STEP'
+            if correlator: r.set(correlator, status.status)
+            store(ticket, status)
+            return
+        status.status = 'SEGMENTATION STARTED'
+        if correlator: r.set(correlator, status.status)
+        store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
+        seg = create_segments(frag, fmd5)
+        # ipdb.set_trace()
+        if not seg:
+            status.status = 'FAILED - SEGMENTATION FAILED'
+            if correlator: r.set(correlator, status.status)
+            store(ticket, status)
+            return
 
-    # shutil.rmtree(res, ignore_errors=True)
-    # os.remove(frag)
+        fin_folder = os.path.join(config.work_folder_tmp, '%s-stream'%fmd5)
 
-    status.status = 'SUCCESS'
-    status.info = dict(
-        mpd='/storage/streaming/{file}-stream/rashavas.mpd'.format(file=fmd5),
-        m3u8='/storage/streaming/{file}-stream/hls/rashavas.m3u8'.format(file=fmd5),
-    )
-    store(ticket, status)
-    store(fmd5, dict(ticket=ticket, status=status))
-    if webhook:
-        try:
-            requests.post(webhook)
-        except ConnectionError:
-            client.captureException()
-    logger.debug('Streaming process of %s ended in %f(3) seconds' % (filename, time.time()-s))
-    return 'OK'
+        if os.path.isdir(fin_folder):
+            shutil.rmtree(fin_folder, ignore_errors=True)
+        os.mkdir(fin_folder)
+        bw_ranges = list(set([min_bw + i * (min_bw + max_bw) /
+                              bw_count for i in range(bw_count)]))
+        mpd_file = []
+        status.status = 'AGRIGATION STARTED'
+        if correlator: r.set(correlator, status.status)
+        store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
+
+        for i in bw_ranges:
+            _tmp = os.path.join(fin_folder, str(i))
+            # if not os.path.isdir(_tmp):
+            #    os.mkdir(_tmp)
+            os.rename(os.path.join(
+                seg, 'fragged_{bitrate}.mp4_out'.format(bitrate=i)), _tmp)
+            with open(os.path.join(_tmp, 'stream.mpd')) as f:
+                mpd_file.append([i, f.read()])
+            # shutil.rmtree(_tmp, ignore_errors=True)
+        final_xml = etree.fromstring(mpd_file[0][1])
+        repr_sec = final_xml[1][1][1]
+        repr_sec.attrib['id'] = os.path.join(
+            str(mpd_file[0][0]), repr_sec.attrib['id'])
+        for i in range(1, len(mpd_file)):
+            _tmpxml = etree.fromstring(mpd_file[i][1])
+            rpsec = _tmpxml[1][1][1]
+            rpsec.attrib['id'] = os.path.join(
+                str(mpd_file[i][0]), rpsec.attrib['id'])
+            (final_xml[1][1]).append(rpsec)
+
+        final_xml.remove(final_xml[0])
+
+        with open(os.path.join(fin_folder, 'rashavas.mpd'), 'wb') as g:
+            g.write(etree.tostring(final_xml))
+
+        # ipdb.set_trace()
+        status.status = 'HLS Stream creation Started'
+        if correlator: r.set(correlator, status.status)
+        store(ticket, status)
+        if hls_segments(frag, fin_folder) is None:
+            status.status = 'creation HLS Stream Failed'
+            if correlator: r.set(correlator, status.status)
+            store(ticket, status)
+            store(fmd5, dict(ticket=ticket, status=status))
+            exit(1)
+
+        status.status = 'TRANSFER ASSETS TO STREAMER SERVER'
+        if correlator: r.set(correlator, status.status)
+        store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
+        shutil.move(fin_folder, os.path.join(config.out_folder, '%s-stream'%fmd5))
+        os.remove(tmpfilepath)
 
 
-# audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);
+        status.status = 'Ready'
+        if correlator: r.set(correlator, status.status)
+        status.info = dict(
+            mpd=target_mpd,
+            m3u8=target_m3u8,
+        )
+        store(ticket, status)
+        store(fmd5, dict(ticket=ticket, status=status))
+        if webhook:
+            try:
+                requests.post(webhook)
+            except ConnectionError:
+                client.captureException()
+        logger.debug('Streaming process of %s ended in %f(3) seconds' % (filename, time.time()-s))
+        return 'OK'
+    else:
+        return 'LOCK'
+
+    # audio_convert('2mp3',bw_count=2,min_bw=256,max_bw=512);
