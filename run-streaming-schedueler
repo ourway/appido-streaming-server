@@ -2,4 +2,4 @@
 
 #source /pypyenv/bin/activate
 cd /streaming
-celery -A tasks worker -l debug -S tasks.db
+celery -A tasks worker --concurrency 4 -l info
