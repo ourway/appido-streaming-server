@@ -58,7 +58,7 @@ def fragment_file(src, fmd5):
     else:
         client.captureMessage('ERROR on fragmentation of file: %s' % src)
 
-def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=10):
+def create_different_resulations(src, fmd5,  min_bw=64, max_bw=1024, bw_count=8):
     s = time.time()
     #logger.info('Started resulations process of %s' % src)
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
@@ -145,7 +145,7 @@ def create_segments(src, fmd5):
         client.captureMessage('ERROR on create segments of %s' % src)
 
 @app.task
-def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
+def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
                   webhook=None, abspath=False, url=True, correlator=None):
 
     s=time.time()

@@ -88,7 +88,7 @@ def hls_segments(src, out_dir):
     return out_dir
 
 
-def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=10):
+def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=4):
     bw_ranges = [min_bw + i * (min_bw + max_bw) /
                  bw_count for i in range(bw_count)]
     out_dir = "{tmp}/{dir_name}".format(tmp=config.work_folder_tmp,
@@ -129,7 +129,7 @@ def create_segments(src_dir, fmd5):
 
 
 @app.task
-def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=10,
+def audio_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=4,
                   webhook=None, abspath=False, url=True, correlator=None):
 
     s = time.time()
