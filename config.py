@@ -1,19 +1,20 @@
 import redis
 import os
 import celery
-import raven
-from raven.contrib.celery import register_signal, register_logger_signal
-from raven.handlers.logging import SentryHandler
-client = raven.Client('https://29b51be9165b4678a16d998c59141c10:e31e0e292ccf41c39251263cb318d202@sentry.appido.ir/6')
-handler = SentryHandler(client)
+#from raven.contrib.celery import register_signal, register_logger_signal
+#from raven.handlers.logging import SentryHandler
+client = os
+#client = raven.Client('https://29b51be9165b4678a16d998c59141c10:e31e0e292ccf41c39251263cb318d202@sentry.appido.ir/6')
+#handler = SentryHandler(client)
 
 
 class Celery(celery.Celery):
     def on_configure(self):
+        pass
         # register a custom filter to filter out duplicate logs
-        register_logger_signal(client)
+        #register_logger_signal(client)
         # hook into the Celery error handler
-        register_signal(client)
+        #register_signal(client)
 
 from celery.result import AsyncResult
 from celery import current_task
@@ -22,7 +23,7 @@ from kombu import Exchange, Queue
 
 
 BROKER_TRANSPORT_OPTIONS = {'fanout_patterns': True, 'fanout_prefix': True}
-REDIS_HOST = 'appido-redis'
+REDIS_HOST = '127.0.0.1'
 BROKER_URL = 'redis://%s:6379/10' % REDIS_HOST
 CELERY_RESULT_BACKEND = 'redis://%s:6379/11' % REDIS_HOST
 

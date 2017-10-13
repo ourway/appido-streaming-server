@@ -17,10 +17,10 @@ import config
 from utils import store, restore, remove,  md5_for_file
 import requests
 import logging
-from raven import Client
-from raven.contrib.bottle import Sentry
+#from raven import Client
+#from raven.contrib.bottle import Sentry
+client = os
 
-client = Client('https://29b51be9165b4678a16d998c59141c10:e31e0e292ccf41c39251263cb318d202@sentry.appido.ir/6')
 logger = logging.getLogger(__name__)
 
 
@@ -187,8 +187,6 @@ def hello():
 
 
 
-
-application = Sentry(application, client)
 
 
 if __name__ == '__main__':
