@@ -145,7 +145,7 @@ def create_segments(src, fmd5):
         print('ERROR on create segments of %s' % src)
 
 @app.task
-def video_convert(filename, ticket, min_bw=64, max_bw=1024, bw_count=8,
+def video_convert(filename, ticket, min_bw=128, max_bw=1280, bw_count=5,
                   webhook=None, abspath=False, url=True, correlator=None):
 
     s=time.time()
