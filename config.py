@@ -1,6 +1,8 @@
-import redis
 import os
+
 import celery
+import redis
+
 #from raven.contrib.celery import register_signal, register_logger_signal
 #from raven.handlers.logging import SentryHandler
 client = os
@@ -16,9 +18,10 @@ class Celery(celery.Celery):
         # hook into the Celery error handler
         #register_signal(client)
 
-from celery.result import AsyncResult
 from celery import current_task
+from celery.result import AsyncResult
 from kombu import Exchange, Queue
+
 #import logging.handlers
 
 

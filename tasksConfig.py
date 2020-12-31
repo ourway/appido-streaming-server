@@ -1,20 +1,18 @@
-
-
 C_FORCE_ROOT = True
 
 
 # 7 days.
-#BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600 *
+# BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600 *
 #                            24 * 7, 'fanout_prefix': True, 'fanout_patterns': True}
 
 CELERY_RESULT_PERSISTENT = True
 CELERY_SEND_TASK_SENT_EVENT = True
-#CELERY_IGNORE_RESULT = False
+# CELERY_IGNORE_RESULT = False
 CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
 CELERY_TRACK_STARTED = True
 
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TIMEZONE = 'Asia/Tehran'
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = "Asia/Tehran"
 CELERY_ENABLE_UTC = True

@@ -1,12 +1,13 @@
-
-import ujson as json
-import uuid
-from config import REDIS as r
-from config import salt, input_folder
-import os
-import requests
-import hashlib
 import datetime
+import hashlib
+import os
+import uuid
+
+import requests
+import ujson as json
+
+from config import REDIS as r
+from config import input_folder, salt
 
 
 class Status(object):
@@ -15,13 +16,15 @@ class Status(object):
     message = None
     info = None
 
+
 def store(key, obj):
     """Store a complex object in redis"""
     _obj = json.dumps(obj)
     load_ = json.loads(_obj)
-    load_['datetime'] = datetime.datetime.utcnow()
+    load_["datetime"] = datetime.datetime.utcnow()
     r.set(salt + key, json.dumps(load_))
-    r.expire(salt + key, 24*3600)  # expire key
+    r.expire(salt + key, 24 * 3600)  # expire key
+
 
 def restore(key):
     """Get a complex object from redis"""
@@ -29,62 +32,62 @@ def restore(key):
     if data:
         return json.loads(data)
 
+
 def remove(key):
     """Get a complex object from redis"""
     r.delete(salt + key)
 
 
+import os
 
 import requests
-import os
 
 
 def download_file(url, ticket):
-    local_filename = os.path.join(input_folder, url.split('/')[-1])
+    local_filename = os.path.join(input_folder, url.split("/")[-1])
     status = Status()
 
-    status.status = 'Start Downloading'
+    status.status = "Start Downloading"
 
     store(ticket, status)
     # NOTE the stream=True parameter
     h = requests.head(url)
-    clength = h.headers['Content-Length']
+    clength = h.headers["Content-Length"]
     if not clength:
-        print('Cant get Content Length')
-        status.status = 'Failed'
-        status.info = 'Can not download %s ' % url
+        print("Cant get Content Length")
+        status.status = "Failed"
+        status.info = "Can not download %s " % url
         store(ticket, status)
         abort(400)
     else:
-        print('Downloading %s' % url)
+        print("Downloading %s" % url)
         clength = int(clength)
 
     r = requests.get(url, stream=True)
     part = 0
-    with open(local_filename, 'wb') as f:
-        chunk_size = 2**16
+    with open(local_filename, "wb") as f:
+        chunk_size = 2 ** 16
         for chunk in r.iter_content(chunk_size=chunk_size):
             if chunk:  # filter out keep-alive new chunks
                 percent = ((part * chunk_size) * 100) / clength
-                status.status = 'Downloading'
-                status.info = '%s percent ' % percent
+                status.status = "Downloading"
+                status.info = "%s percent " % percent
                 store(ticket, status)
-                print('%s Percent' % percent)
+                print("%s Percent" % percent)
                 f.write(chunk)
                 f.flush()
                 os.fsync(f.fileno())
                 part += 1
                 # f.flush() commented by recommendation from J.F.Sebastian
 
-    status.status = 'Download Finished'
-    status.info = ''
+    status.status = "Download Finished"
+    status.info = ""
     store(ticket, status)
     return local_filename
 
 
-
-def md5_for_file(f, block_size=2**20):
-    f = open(f, 'rb')
+def md5_for_file(f, block_size=2 ** 20):
+    f = open(f, "rb")
     md5 = hashlib.md5()
     while True:
         data = f.read(block_size)
@@ -92,7 +95,3 @@ def md5_for_file(f, block_size=2**20):
             break
         md5.update(data)
     return md5.hexdigest()
-
-
-
-
