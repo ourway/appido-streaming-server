@@ -20,3 +20,4 @@ streaming/
 *.dat
 *.dir
 cert/*.pem
+Session.vim
