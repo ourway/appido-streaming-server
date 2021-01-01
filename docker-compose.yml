@@ -11,16 +11,17 @@ services:
     networks:
       - stream-net
 
-  api-server:
+  scheduler:
     build:
       context: .
       dockerfile: Dockerfile.local
-      target: local
+      target: local_celery
 
     env_file: 
       - .env
     restart: always
     volumes:
+      - .:/app/dev
       - video-temp-data:/storage/video_tmp:rw
       - video-uploads:/storage/uploads:rw
       - streaming-data:/storage/streaming:rw
@@ -29,9 +30,29 @@ services:
     networks:
       - stream-net
 
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+      target: local_server
+
+    env_file: 
+      - .env
+    restart: always
+    volumes:
+      - .:/app/dev
+      - video-temp-data:/storage/video_tmp:rw
+      - video-uploads:/storage/uploads:rw
+      - streaming-data:/storage/streaming:rw
+    depends_on:
+      - redis
+      - scheduler
+    networks:
+      - stream-net
+
+
   nginx: 
     image: nginx:latest
-    container_name: production_nginx
     volumes:
       - ./streamserver.net.nginx.conf:/etc/nginx/conf.d/dev.streamserver.net.conf:ro
       - ./cert:/etc/nginx/cert
@@ -44,6 +65,7 @@ services:
       - stream-net
     depends_on:
       - redis
+      - scheduler
       - api-server
     
 volumes:

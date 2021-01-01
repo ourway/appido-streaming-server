@@ -11,8 +11,9 @@ RUN \
  python3 -m pip install -r requirements.txt --no-cache-dir && \
  apk --purge del .build-deps
 
+RUN apk add --no-cache libxml2 libxml2-dev libxslt-dev
 
-FROM prod_base AS prod
+FROM prod_base AS prod_bin
 
 COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
 COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
@@ -21,4 +22,10 @@ ENV PATH=/opt/ffmpeg/bin:$PATH
 
 COPY . .
 
-CMD ["sleep", "10000"]
+
+FROM prod_bin AS prod_server
+EXPOSE 4000
+CMD ["gunicorn", "server", "-b", "0.0.0.0:4000", "-t", "300", "-w", "4", "--log-level", "info"]
+
+FROM prod_bin AS prod_celery
+CMD ["celery", "-A", "tasks", "worker", "--concurrency", "4", "-l", "info"]

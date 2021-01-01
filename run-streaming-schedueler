@@ -1,5 +1,2 @@
 #!/bin/bash
-
-#source /pypyenv/bin/activate
-cd /streaming
-celery -A tasks worker --concurrency 4 -l info
+celery -A tasks worker --concurrency 2 -l info

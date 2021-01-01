@@ -14,12 +14,18 @@ RUN \
  python3 -m pip install -r requirements-dev.txt --no-cache-dir && \
  apk --purge del .build-deps
 
+RUN apk add --no-cache libxml2 libxml2-dev libxslt-dev
 
-FROM local_base AS local
+FROM local_base AS local_bin
 
 COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
 COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
 COPY --from=farshidashouri/ffmpeg:latest /usr/lib/. /usr/local/lib/
 ENV PATH=/opt/ffmpeg/bin:$PATH
 
-CMD ["sleep", "10000"]
+FROM local_bin AS local_server
+EXPOSE 4000
+CMD ["gunicorn", "server", "-b", "0.0.0.0:4000", "-t", "300", "--reload", "--log-level", "debug"]
+
+FROM local_bin AS local_celery
+CMD ["celery", "-A", "tasks", "worker", "--concurrency", "2", "-l", "debug"]
