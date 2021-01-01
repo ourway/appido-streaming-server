@@ -19,4 +19,6 @@ COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
 COPY --from=farshidashouri/ffmpeg:latest /usr/lib/. /usr/local/lib/
 ENV PATH=/opt/ffmpeg/bin:$PATH
 
+COPY . .
+
 CMD ["sh"]
