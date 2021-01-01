@@ -1,4 +1,4 @@
-FROM python:3.8-alpine AS prod
+FROM python:3.8-alpine AS prod_base
 LABEL maintainer="farsheed.ashouri@gmail.com"
 
 WORKDIR /app
@@ -12,7 +12,7 @@ RUN \
  apk --purge del .build-deps
 
 
-FROM prod
+FROM prod_base AS prod
 
 COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
 COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
@@ -21,4 +21,4 @@ ENV PATH=/opt/ffmpeg/bin:$PATH
 
 COPY . .
 
-CMD ["sh"]
+CMD ["sleep", "10000"]

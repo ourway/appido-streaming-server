@@ -1,4 +1,4 @@
-FROM python:3.8-alpine AS local
+FROM python:3.8-alpine AS local_base
 LABEL maintainer="farsheed.ashouri@gmail.com"
 
 WORKDIR /app/dev
@@ -15,11 +15,11 @@ RUN \
  apk --purge del .build-deps
 
 
-FROM local
+FROM local_base AS local
 
 COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
 COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
 COPY --from=farshidashouri/ffmpeg:latest /usr/lib/. /usr/local/lib/
 ENV PATH=/opt/ffmpeg/bin:$PATH
 
-CMD ["bash"]
+CMD ["sleep", "10000"]

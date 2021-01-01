@@ -68,7 +68,7 @@ def video_upload():
     'flowChunkNumber', 'flowIdentifier', 'flowRelativePath', 'flowTotalSize',
     'flowFilename']
     """
-    temp_path = os.path.join("uploads", request.forms.flowIdentifier)
+    temp_path = os.path.join(config.uploads_folder, request.forms.flowIdentifier)
     """ first lets get the file"""
     with open(temp_path, "ab") as target:
         chunk = request.files.file.file.read(int(request.forms.flowCurrentChunkSize))
@@ -97,7 +97,7 @@ def audio_upload():
     'flowChunkNumber', 'flowIdentifier', 'flowRelativePath', 'flowTotalSize',
     'flowFilename']
     """
-    temp_path = os.path.join("uploads", request.forms.flowIdentifier)
+    temp_path = os.path.join(config.uploads_folder, request.forms.flowIdentifier)
     """ first lets get the file"""
     with open(temp_path, "ab") as target:
         chunk = request.files.file.file.read(int(request.forms.flowCurrentChunkSize))

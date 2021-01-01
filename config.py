@@ -39,6 +39,7 @@ REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379)
 work_folder_tmp = os.path.abspath("/storage/video_tmp")
 input_folder = os.path.abspath("/storage/video_tmp")
 out_folder = os.path.abspath("/storage/streaming")
+uploads_folder = os.path.abspath("/storage/uploads")
 
 for each in [work_folder_tmp, input_folder, out_folder]:
     if not os.path.isdir(each):
