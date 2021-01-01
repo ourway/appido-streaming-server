@@ -59,7 +59,7 @@ def fragment_file(src, fmd5):
     if p.returncode == 0:
         return fullpath
     else:
-        print("ERROR on fragmentation of file: %s" % src)
+        print(("ERROR on fragmentation of file: %s" % src))
 
 
 def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=8):
@@ -93,13 +93,13 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=8):
         "-o",
         out_dir,
     ]
-    print(" ".join(cmd))
+    print((" ".join(cmd)))
     p = subprocess.Popen(cmd)
     p.wait()
     if p.returncode == 0:
         return out_dir
     else:
-        print("ERROR on craete different resulations for file %s" % src)
+        print(("ERROR on craete different resulations for file %s" % src))
 
 
 def hls_segments(src, fmd5):
@@ -168,7 +168,7 @@ def create_segments(src, fmd5):
         f.close()
         return out_dir
     else:
-        print("ERROR on create segments of %s" % src)
+        print(("ERROR on create segments of %s" % src))
 
 
 @app.task

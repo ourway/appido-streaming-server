@@ -60,7 +60,7 @@ def download_file(url, ticket):
         store(ticket, status)
         abort(400)
     else:
-        print("Downloading %s" % url)
+        print(("Downloading %s" % url))
         clength = int(clength)
 
     r = requests.get(url, stream=True)
@@ -73,7 +73,7 @@ def download_file(url, ticket):
                 status.status = "Downloading"
                 status.info = "%s percent " % percent
                 store(ticket, status)
-                print("%s Percent" % percent)
+                print(("%s Percent" % percent))
                 f.write(chunk)
                 f.flush()
                 os.fsync(f.fileno())
