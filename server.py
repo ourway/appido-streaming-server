@@ -2,7 +2,6 @@
 
 
 __author = "Farsheed Ashouri. Thanks to msd for the original idea"
-__copyright = "Rashavas telecom @ 2015-2016"
 
 
 import logging

@@ -129,16 +129,16 @@ def hls_segments(src, fmd5):
         if p.returncode != 0:
             return None
     os.chdir(wdir)
-    rashavas_m3u8 = open(os.path.join(out_dir, "rashavas.m3u8"), "w")
-    rashavas_m3u8.write("\r\n".join(m3u8))
-    rashavas_m3u8.close()
+    program_m3u8 = open(os.path.join(out_dir, "program.m3u8"), "w")
+    program_m3u8.write("\r\n".join(m3u8))
+    program_m3u8.close()
     return out_dir
 
 
 def create_segments(src, fmd5):
     s = time.time()
     out_dir = "{tmp}/{dir_name}".format(tmp=config.out_folder, dir_name="%s-stream" % fmd5)
-    mpd_file = "rashavas.mpd"
+    mpd_file = "program.mpd"
     cmd = [
         "nice",
         "python",
@@ -203,10 +203,8 @@ def video_convert(
         r.set(lockKey, "LOCK")
         r.expire(lockKey, 3600 * 4)  ## 4 hours lock
 
-        target_mpd = "{of}/{file}/rashavas.mpd".format(
-            file="%s-stream" % fmd5, of=config.out_folder
-        )
-        target_m3u8 = "{of}/{file}/hls/rashavas.m3u8".format(
+        target_mpd = "/{file}/program.mpd".format(file="%s-stream" % fmd5, of=config.out_folder)
+        target_m3u8 = "/{file}/hls/program.m3u8".format(
             file="%s-stream" % fmd5, of=config.out_folder
         )
 

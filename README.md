@@ -49,8 +49,8 @@ Result sample:
         "progress": 0,
         "message": null,
         "info": {
-            "mpd": "/storage/streaming/d7a3decdb6280eb0ef3a059ac35ea0ee-stream/rashavas.mpd",
-            "m3u8": "/storage/streaming/d7a3decdb6280eb0ef3a059ac35ea0ee-stream/hls/rashavas.m3u8"
+            "mpd": "/d7a3decdb6280eb0ef3a059ac35ea0ee-stream/program.mpd",
+            "m3u8": "/d7a3decdb6280eb0ef3a059ac35ea0ee-stream/hls/program.m3u8"
         },
         "datetime": "01/01/21 08:21:30"
     }

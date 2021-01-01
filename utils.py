@@ -1,14 +1,14 @@
 import hashlib
 import os
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime
 
 import requests
 import ujson as json
-from dataclasses import dataclass, asdict
 
 from config import REDIS as r
-from config import input_folder, salt, TIME_FORMAT
+from config import TIME_FORMAT, input_folder, salt
 
 
 @dataclass

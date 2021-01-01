@@ -85,9 +85,9 @@ def hls_segments(src, out_dir):
             return None
         else:
             os.chdir(wdir)
-    rashavas_m3u8 = open(os.path.join(out_dir, "rashavas.m3u8"), "w")
-    rashavas_m3u8.write("\r\n".join(m3u8))
-    rashavas_m3u8.close()
+    program_m3u8 = open(os.path.join(out_dir, "program.m3u8"), "w")
+    program_m3u8.write("\r\n".join(m3u8))
+    program_m3u8.close()
     return out_dir
 
 
@@ -171,10 +171,8 @@ def audio_convert(
         r.set(lockKey, "LOCK")
         r.expire(lockKey, 7200)
 
-        target_mpd = "{of}/{file}/rashavas.mpd".format(
-            file="%s-stream" % fmd5, of=config.out_folder
-        )
-        target_m3u8 = "{of}/{file}/hls/rashavas.m3u8".format(
+        target_mpd = "/{file}/program.mpd".format(file="%s-stream" % fmd5, of=config.out_folder)
+        target_m3u8 = "/{file}/hls/program.m3u8".format(
             file="%s-stream" % fmd5, of=config.out_folder
         )
 
@@ -271,7 +269,7 @@ def audio_convert(
 
         final_xml.remove(final_xml[0])
 
-        with open(os.path.join(fin_folder, "rashavas.mpd"), "wb") as g:
+        with open(os.path.join(fin_folder, "program.mpd"), "wb") as g:
             g.write(etree.tostring(final_xml))
 
         # ipdb.set_trace()
