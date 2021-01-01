@@ -21,7 +21,7 @@ FROM local_base AS local_bin
 COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
 COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
 COPY --from=farshidashouri/ffmpeg:latest /usr/lib/. /usr/local/lib/
-ENV PATH=/opt/ffmpeg/bin:$PATH
+ENV PATH=/opt/ffmpeg/bin:/Bento4/bin:$PATH
 
 FROM local_bin AS local_server
 EXPOSE 4000

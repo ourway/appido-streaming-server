@@ -1,27 +1,35 @@
-import datetime
 import hashlib
 import os
 import uuid
+from datetime import datetime
 
 import requests
 import ujson as json
+from dataclasses import dataclass, asdict
 
 from config import REDIS as r
-from config import input_folder, salt
+from config import input_folder, salt, TIME_FORMAT
 
 
-class Status(object):
-    status = None
-    progress = 0
-    message = None
-    info = None
+@dataclass
+class Status:
+    status: str = None
+    progress: int = 0
+    message: str = None
+    info: str = None
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
 
 
 def store(key, obj):
     """Store a complex object in redis"""
-    _obj = json.dumps(obj)
-    load_ = json.loads(_obj)
-    load_["datetime"] = datetime.datetime.utcnow()
+    if isinstance(obj, dict):
+        load_ = obj
+    else:
+        _obj = obj.to_json()
+        load_ = json.loads(_obj)
+    load_["datetime"] = datetime.strftime(datetime.utcnow(), TIME_FORMAT)
     r.set(salt + key, json.dumps(load_))
     r.expire(salt + key, 24 * 3600)  # expire key
 

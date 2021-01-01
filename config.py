@@ -49,6 +49,7 @@ bento4_path = os.path.abspath("/Bento4")
 admin_user = "root"
 admin_password = "why_321"
 salt = "Doo_5b9m"
+TIME_FORMAT = "%d/%m/%y %H:%M:%S"
 
 # smtp_handler = logging.handlers.SMTPHandler(mailhost=("mail.rashavas.com", 587),
 #                                            fromaddr="no-reply@rashavas.com",

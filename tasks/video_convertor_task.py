@@ -74,7 +74,7 @@ def create_different_resulations(src, fmd5, min_bw=64, max_bw=1024, bw_count=8):
         "nice",
         "-n",
         "20",
-        "python2",
+        "python",
         os.path.join(config.bento4_path, "utils", "mp4-dash-encode.py"),
         "-v",
         "-f",
@@ -141,7 +141,7 @@ def create_segments(src, fmd5):
     mpd_file = "rashavas.mpd"
     cmd = [
         "nice",
-        "python2",
+        "python",
         os.path.join(config.bento4_path, "utils", "mp4-dash.py"),
         "-f",
         "-v",
@@ -220,7 +220,7 @@ def video_convert(
                 m3u8=target_m3u8,
             )
 
-            store(fmd5, dict(ticket=ticket, status=status))
+            store(fmd5, dict(ticket=ticket, status=status.to_json()))
             return status
 
         status.status = "STARTED"
@@ -232,7 +232,7 @@ def video_convert(
         if correlator:
             r.set(correlator, status.status)
         store(ticket, status)
-        store(fmd5, dict(ticket=ticket, status=status))
+        store(fmd5, dict(ticket=ticket, status=status.to_json()))
         frag = fragment_file(fullfilename, fmd5)
         if frag == None:
             status.status = "FAILED"
@@ -240,7 +240,7 @@ def video_convert(
                 r.set(correlator, status.status)
             status.info = "fragmantation failed"
             store(ticket, status)
-            store(fmd5, dict(ticket=ticket, status=status))
+            store(fmd5, dict(ticket=ticket, status=status.to_json()))
             return
         status.status = "RESULATION PROCESS"
         if correlator:
@@ -249,7 +249,7 @@ def video_convert(
             count=bw_count, min=min_bw, max=max_bw
         )
         store(ticket, status)
-        store(fmd5, dict(ticket=ticket, status=status))
+        store(fmd5, dict(ticket=ticket, status=status.to_json()))
         res = create_different_resulations(frag, fmd5, min_bw, max_bw, bw_count)
         if res == None:
             status.status = "FAILED"
@@ -269,7 +269,8 @@ def video_convert(
         # cleanup
         shutil.rmtree(res, ignore_errors=True)
         os.remove(frag)
-        os.remove(tmpfilepath)
+        if abspath:
+            os.remove(tmpfilepath)
 
         status.status = "Ready"
         if correlator:
@@ -279,7 +280,7 @@ def video_convert(
             m3u8=target_m3u8,
         )
         store(ticket, status)
-        store(fmd5, dict(ticket=ticket, status=status))
+        store(fmd5, dict(ticket=ticket, status=status.to_json()))
         if webhook:
             try:
                 requests.post(webhook)

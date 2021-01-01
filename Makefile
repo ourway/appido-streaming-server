@@ -8,6 +8,7 @@ start:
 	@docker-compose up --build --remove-orphans -d
 	@echo "waiting 2 seconds to start the server"
 	@sleep 2
+	@make logs
 
 clean:
 	@docker-compose stop
