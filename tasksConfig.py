@@ -1,6 +1,3 @@
-C_FORCE_ROOT = True
-
-
 # 7 days.
 # BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600 *
 #                            24 * 7, 'fanout_prefix': True, 'fanout_patterns': True}

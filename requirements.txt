@@ -1,0 +1,8 @@
+celery
+bottle
+redis
+lxml
+gunicorn
+requests
+msgpack-python
+ujson

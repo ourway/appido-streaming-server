@@ -19,3 +19,4 @@ streaming/
 *.mp4
 *.dat
 *.dir
+cert/*.pem

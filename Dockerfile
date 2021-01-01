@@ -1,54 +1,22 @@
-FROM python:2
+FROM python:3.8-alpine AS prod
+LABEL maintainer="farsheed.ashouri@gmail.com"
 
-## for celery 
-RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+WORKDIR /app
 
-ENV C_FORCE_ROOT=true
+COPY requirements.txt .
 
-## bento4
-ADD Bento4/ /Bento4/
-ENV PATH=$PATH:/Bento4/bin/
-
-RUN chmod -R +x /Bento4/
-
-## python requirements
-ADD requirements.txt /data/
-
-## ffmpeg prequesties
-
-RUN apt-get update -y
-RUN apt-get -y --force-yes install autoconf automake build-essential \
-    libass-dev libfreetype6-dev libsdl1.2-dev libtheora-dev libtool \
-    libva-dev libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev \
-    libxcb-xfixes0-dev pkg-config texinfo zlib1g-dev
-
-RUN apt-get install -y libx264-dev
-RUN apt-get install -y libx264-dev
-RUN apt-get install -y libmp3lame-dev
-RUN apt-get install -y libopus-dev
+RUN \
+ apk add --no-cache postgresql-libs && \
+ apk add --no-cache --virtual .build-deps gcc musl-dev postgresql-dev g++ python3-dev libxml2 libxml2-dev libxslt-dev && \
+ python3 -m pip install -r requirements.txt --no-cache-dir && \
+ apk --purge del .build-deps
 
 
+FROM prod
 
-## ffmpeg
-ADD ffmpeg/ffmpeg /usr/bin/ffmpeg
-ADD ffmpeg/ffprobe /usr/bin/ffprobe
+COPY --from=farshidashouri/bento4:latest /opt/bento4 /Bento4
+COPY --from=farshidashouri/ffmpeg:latest /opt/ffmpeg /opt/ffmpeg
+COPY --from=farshidashouri/ffmpeg:latest /usr/lib/. /usr/local/lib/
+ENV PATH=/opt/ffmpeg/bin:$PATH
 
-RUN chmod +x /usr/bin/ffmpeg
-RUN chmod +x /usr/bin/ffprobe
-
-
-## vim
-RUN apt-get install -y vim
-
-
-
-WORKDIR /data
-RUN pip install -r requirements.txt
-
-ADD run-streaming-schedueler /run-streaming-schedueler
-ADD run-streaming-api /run-streaming-api
-
-
-
-WORKDIR /streaming
-EXPOSE 4000
+CMD ["sh"]
