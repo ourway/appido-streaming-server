@@ -5,7 +5,8 @@ export
 
 start:
 	@make clean
-	@docker-compose up --build --remove-orphans -d
+	@docker-compose build --parallel --pull
+	@docker-compose up --no-deps --remove-orphans -d
 	@echo "waiting 2 seconds to start the server"
 	@sleep 2
 	@make logs
