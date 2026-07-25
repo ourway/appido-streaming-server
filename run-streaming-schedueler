@@ -1,2 +1,2 @@
 #!/bin/bash
-celery -A tasks worker --concurrency 2 -l info
+.venv/bin/celery -A tasks worker --concurrency 2 -l info

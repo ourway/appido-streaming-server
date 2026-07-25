@@ -1,8 +1,7 @@
-celery
-bottle
-redis
-lxml
-gunicorn
-requests
-msgpack-python
-ujson
+bottle>=0.13,<0.14
+celery>=5.3,<6
+redis>=5,<6
+lxml>=5,<6
+gunicorn>=23,<24
+requests>=2.32,<3
+ujson>=5,<6

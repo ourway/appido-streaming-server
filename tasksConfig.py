@@ -1,15 +1,19 @@
-# 7 days.
-# BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600 *
-#                            24 * 7, 'fanout_prefix': True, 'fanout_patterns': True}
+# Celery 4+ configuration (lowercase setting names).
+# 7-day visibility timeout commented out; uncomment to enable.
+# broker_transport_options = {
+#     'visibility_timeout': 3600 * 24 * 7,
+#     'fanout_prefix': True,
+#     'fanout_patterns': True,
+# }
 
-CELERY_RESULT_PERSISTENT = True
-CELERY_SEND_TASK_SENT_EVENT = True
-# CELERY_IGNORE_RESULT = False
-CELERY_STORE_ERRORS_EVEN_IF_IGNORED = True
-CELERY_TRACK_STARTED = True
+result_persistent = True
+task_send_sent_event = True
+# task_ignore_result = False
+task_store_errors_even_if_ignored = True
+task_track_started = True
 
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TIMEZONE = "Asia/Tehran"
-CELERY_ENABLE_UTC = True
+task_serializer = "json"
+result_serializer = "json"
+accept_content = ["json"]
+timezone = "Asia/Tehran"
+enable_utc = True

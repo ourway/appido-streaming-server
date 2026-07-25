@@ -1,33 +1,29 @@
 #!/usr/bin/env python
+"""appido streaming server - HTTP API.
 
+Endpoints:
 
-__author = "Farsheed Ashouri. Thanks to msd for the original idea"
-
+  GET  /streaming/ping                        -> health check
+  GET  /streaming/api/key/<key>                -> read ticket status from redis
+  POST /streaming/api/revoke/<task_id>         -> revoke a celery task + drop key
+  GET  /streaming/api/status/<task_id>         -> celery task status
+  POST /streaming/api/video_upload             -> chunked upload (flow.js) -> video
+  POST /streaming/api/audio_upload             -> chunked upload (flow.js) -> audio
+  POST /streaming/api/media_add_path           -> enqueue encode from url/filepath
+"""
 
 import logging
 import os
-import shutil
 import uuid
 
-# import ipdb
 import bottle
-import requests
 from bottle import abort, post, request, response, route, run, static_file
 
 import config
-
-# from convert_task import convert
 import tasks
-from utils import md5_for_file, remove, restore, store
-
-# from raven import Client
-# from raven.contrib.bottle import Sentry
-client = os
+from utils import remove, restore, store
 
 logger = logging.getLogger(__name__)
-
-
-# app = config.app
 
 application = bottle.Bottle()
 application.catchall = False
@@ -40,6 +36,13 @@ def after():
     response.headers[
         "Access-Control-Allow-Headers"
     ] = "Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token"
+
+
+@application.route("/<:re:.*>", method="OPTIONS")
+def cors_preflight():
+    """Answer CORS preflight for any path. after_request adds the headers."""
+    response.status = 204
+    return ""
 
 
 @application.get("/streaming/api/key/<key>")
@@ -68,11 +71,10 @@ def video_upload():
     'flowFilename']
     """
     temp_path = os.path.join(config.uploads_folder, request.forms.flowIdentifier)
-    """ first lets get the file"""
+    # first lets get the file
     with open(temp_path, "ab") as target:
         chunk = request.files.file.file.read(int(request.forms.flowCurrentChunkSize))
         target.write(chunk)
-    """ now, lets save it in a good place"""
 
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
@@ -97,20 +99,16 @@ def audio_upload():
     'flowFilename']
     """
     temp_path = os.path.join(config.uploads_folder, request.forms.flowIdentifier)
-    """ first lets get the file"""
     with open(temp_path, "ab") as target:
         chunk = request.files.file.file.read(int(request.forms.flowCurrentChunkSize))
         target.write(chunk)
-    """ now, lets save it in a good place"""
 
     if request.forms.flowTotalChunks == request.forms.flowChunkNumber:
         response.status = 201
         webhook = request.forms.get("webhook")
-
         ext = request.forms.flowFilename.split(".")[-1]
         ticket = uuid.uuid4().hex
         new_file_name = ticket + "." + ext
-        # set name to file
         os.rename(temp_path, os.path.join(config.work_folder_tmp, new_file_name))
         task = tasks.audio_convert.delay(new_file_name, ticket)
         return dict(message="Created", ticket=ticket, webhook=webhook, task=str(task))
@@ -121,8 +119,6 @@ def audio_upload():
 
 @application.post("/streaming/api/media_add_path")
 def media_add_path():
-    fpath = None
-    #        ipdb.set_trace()
     if not request.json:
         abort(400)
     filepath = request.json.get("filepath", None)
@@ -130,7 +126,9 @@ def media_add_path():
     correlator = request.json.get("correlator")
     url = request.json.get("url", None)
     webhook = request.json.get("webhook")
-    logger.error("recived a request on %s" % filepath or url)
+    # Note: previously `% filepath or url` had wrong precedence and would
+    # log `None` when filepath was falsy even if url was set.
+    logger.error("received a request on %s", filepath or url)
     if not (url or filepath):
         abort(400)
     ticket = uuid.uuid4().hex
@@ -139,21 +137,13 @@ def media_add_path():
             fpath = url
         else:
             fpath = filepath
-            # fmd5 = md5_for_file(fpath)
-            # remd5 = restore(fmd5)
-            # if remd5:
-            #    old_ticket = remd5.get('ticket')
-            #    if old_ticket and get_key(old_ticket)['result']:
-            #        logger.error('file with same md5 available. ticket: %s'%old_ticket)
-            #        return dict(message='Available', info=get_key(old_ticket)['result'],
-            #                ticket=old_ticket)
         if _format == "video":
             task = tasks.video_convert.delay(
                 fpath,
                 ticket,
                 webhook=webhook,
-                abspath=filepath != None,
-                url=url != None,
+                abspath=filepath is not None,
+                url=url is not None,
                 correlator=correlator,
             )
         elif _format == "audio":
@@ -161,22 +151,17 @@ def media_add_path():
                 fpath,
                 ticket,
                 webhook=webhook,
-                abspath=filepath != None,
-                url=url != None,
+                abspath=filepath is not None,
+                url=url is not None,
                 correlator=correlator,
             )
+        else:
+            abort(400, "unknown format: %s" % _format)
+            return  # abort() raises HTTPError; this is defensive
         response.status = 201
         return dict(message="Created", ticket=ticket, webhook=webhook, task=str(task))
-
-
-# @application.route('<filename:re:.*>')
-# def send_image(filename):
-#    return static_file(filename, root='.')
-
-
-# @application.route('/streaming/static/<filename:path>')
-# def static_serve(filename):
-#    return static_file(filename, root='.')
+    # filepath given but not a real file, and no url
+    abort(400)
 
 
 @application.get("/streaming/ping")

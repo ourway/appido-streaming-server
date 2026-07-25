@@ -1,11 +1,8 @@
-black == 20.8b1
-isort
-ipython
-pgcli
-pylist
-pytest
-pytest-asyncio
-pytest-cov
-mypy
-pylint
-
+black>=24,<25
+isort>=5,<6
+ipython>=8,<9
+pytest>=8,<9
+pytest-asyncio>=0.23
+pytest-cov>=5,<6
+mypy>=1.10,<2
+pylint>=3,<4

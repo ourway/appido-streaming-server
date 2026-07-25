@@ -1,8 +1,16 @@
+"""Persistence and download helpers for the streaming server.
+
+`store`/`restore`/`remove` keep per-ticket encode status in Redis (namespaced by
+`config.salt`). `download_file` fetches a URL into the input folder while
+reporting progress to the same ticket store. `md5_for_file` hashes a file
+without loading it all into memory.
+"""
+
 import hashlib
 import os
-import uuid
-from dataclasses import asdict, dataclass
-from datetime import datetime
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from typing import Optional
 
 import requests
 import ujson as json
@@ -11,82 +19,100 @@ from config import REDIS as r
 from config import TIME_FORMAT, input_folder, salt
 
 
+class DownloadError(Exception):
+    """Raised when a remote download cannot be started or completed."""
+
+
 @dataclass
 class Status:
-    status: str = None
+    status: Optional[str] = None
     progress: int = 0
-    message: str = None
-    info: str = None
+    message: Optional[str] = None
+    info: object = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self))
 
 
 def store(key, obj):
-    """Store a complex object in redis"""
+    """Store a complex object in redis, namespaced by `salt`."""
     if isinstance(obj, dict):
-        load_ = obj
+        load_ = dict(obj)
     else:
-        _obj = obj.to_json()
-        load_ = json.loads(_obj)
-    load_["datetime"] = datetime.strftime(datetime.utcnow(), TIME_FORMAT)
+        load_ = json.loads(obj.to_json())
+    load_["datetime"] = datetime.now(timezone.utc).strftime(TIME_FORMAT)
     r.set(salt + key, json.dumps(load_))
-    r.expire(salt + key, 24 * 3600)  # expire key
+    r.expire(salt + key, 24 * 3600)  # expire key after 24h
 
 
 def restore(key):
-    """Get a complex object from redis"""
+    """Get a complex object from redis, or None if absent."""
     data = r.get(salt + key)
-    if data:
+    if data is not None:
         return json.loads(data)
+    return None
 
 
 def remove(key):
-    """Get a complex object from redis"""
+    """Delete a complex object from redis."""
     r.delete(salt + key)
 
 
-import os
+def download_file(url: str, ticket: str) -> str:
+    """Download `url` into the input folder, reporting progress to `ticket`.
 
-import requests
-
-
-def download_file(url, ticket):
-    local_filename = os.path.join(input_folder, url.split("/")[-1])
-    status = Status()
-
-    status.status = "Start Downloading"
-
+    Returns the local filename. Raises DownloadError on any failure (so celery
+    can mark the task FAILED instead of calling bottle.abort, which is not
+    available outside the web context).
+    """
+    local_filename = os.path.join(input_folder, os.path.basename(url))
+    status = Status(status="Start Downloading")
     store(ticket, status)
-    # NOTE the stream=True parameter
-    h = requests.head(url)
-    clength = h.headers["Content-Length"]
-    if not clength:
-        print("Cant get Content Length")
-        status.status = "Failed"
-        status.info = "Can not download %s " % url
-        store(ticket, status)
-        abort(400)
-    else:
-        print(("Downloading %s" % url))
-        clength = int(clength)
 
-    r = requests.get(url, stream=True)
-    part = 0
-    with open(local_filename, "wb") as f:
+    try:
+        h = requests.head(url, allow_redirects=True, timeout=30)
+        h.raise_for_status()
+    except requests.RequestException as exc:
+        status.status = "Failed"
+        status.info = "Cannot reach %s: %s" % (url, exc)
+        store(ticket, status)
+        raise DownloadError(status.info)
+
+    clength = h.headers.get("Content-Length")
+    if not clength:
+        # No Content-Length (e.g. chunked transfer). Download anyway, but flag it.
+        print("Warning: no Content-Length for %s" % url)
+        clength_int = None
+    else:
+        clength_int = int(clength)
+        print("Downloading %s" % url)
+
+    try:
+        resp = requests.get(url, stream=True, timeout=60)
+        resp.raise_for_status()
+        part = 0
         chunk_size = 2 ** 16
-        for chunk in r.iter_content(chunk_size=chunk_size):
-            if chunk:  # filter out keep-alive new chunks
-                percent = ((part * chunk_size) * 100) / clength
-                status.status = "Downloading"
-                status.info = "%s percent " % percent
-                store(ticket, status)
-                print(("%s Percent" % percent))
+        with open(local_filename, "wb") as f:
+            for chunk in resp.iter_content(chunk_size=chunk_size):
+                if not chunk:  # filter keep-alive chunks
+                    continue
+                if clength_int:
+                    percent = (part * chunk_size * 100.0) / clength_int
+                    status.status = "Downloading"
+                    status.info = "%.2f percent" % percent
+                    store(ticket, status)
                 f.write(chunk)
-                f.flush()
-                os.fsync(f.fileno())
                 part += 1
-                # f.flush() commented by recommendation from J.F.Sebastian
+    except (requests.RequestException, OSError) as exc:
+        status.status = "Failed"
+        status.info = "Download error for %s: %s" % (url, exc)
+        store(ticket, status)
+        # Best-effort cleanup of a partial download.
+        try:
+            os.remove(local_filename)
+        except OSError:
+            pass
+        raise DownloadError(status.info)
 
     status.status = "Download Finished"
     status.info = ""
@@ -94,12 +120,10 @@ def download_file(url, ticket):
     return local_filename
 
 
-def md5_for_file(f, block_size=2 ** 20):
-    f = open(f, "rb")
+def md5_for_file(path, block_size: int = 2 ** 20) -> str:
+    """Return the hex md5 of the file at `path` without loading it whole."""
     md5 = hashlib.md5()
-    while True:
-        data = f.read(block_size)
-        if not data:
-            break
-        md5.update(data)
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(block_size), b""):
+            md5.update(block)
     return md5.hexdigest()

@@ -1,2 +1,7 @@
 #!/bin/bash
-gunicorn server -w 4 -b :4000 -t 300
+# Launch the HTTP API (gunicorn) using the local venv if present, else PATH.
+if [ -x ".venv/bin/gunicorn" ]; then
+    .venv/bin/gunicorn server -w 4 -b :4000 -t 300
+else
+    gunicorn server -w 4 -b :4000 -t 300
+fi

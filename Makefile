@@ -29,24 +29,18 @@ restart:
 shell:
 	@docker-compose exec api-server sh
 
-test-fmtc:
-	@docker-compose exec api-server python -m pytest --cov-report term-missing:skip-covered  --cov=promo_feed systests  --no-header -s -vv -m fmtc
-
-test-tasks:
-	@docker-compose exec api-server python -m pytest --cov-report term-missing:skip-covered  --cov=promo_feed systests  --no-header -s -vv -m tasks
-
 test:
-	@docker-compose exec api-server python -m pytest --cov-report term-missing:skip-covered  --cov=promo_feed systests  --no-header -s -vv
+	@docker-compose exec api-server python -m pytest --no-header -s -vv
 
 ipython:
 	@docker-compose exec api-server ipython 
 
 lint:
-	@docker-compose exec api-server pylint -j 2 promo_feed/
+	@docker-compose exec api-server pylint -j 2 server.py config.py utils.py tasks/
 
 logs:
 	@docker-compose logs -t -f --tail=all
 
 ping:
-	@docker-compose exec api-server curl -X GET "http://127.0.0.1:4000/streaming/v1/ping/" -H  "accept: application/json" -H  "Authorization: Bearer $(SECRET_KEY)"
+	@docker-compose exec api-server curl -X GET "http://127.0.0.1:4000/streaming/ping" -H  "accept: application/json"
 

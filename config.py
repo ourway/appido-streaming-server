@@ -1,58 +1,87 @@
+"""Streaming server configuration.
+
+All environment-tunable values read os.environ with safe defaults so the same
+code runs locally (host) and inside Docker:
+
+  REDIS_HOST     default "localhost"  (Docker: "redis")
+  REDIS_PORT     default 6379
+  REDIS_DB_BROKER default 10
+  REDIS_DB_BACKEND default 11
+  BENTO4_PATH    default "revision/bento4" locally, "/Bento4" in Docker image
+  STORAGE_ROOT   default "/storage"
+
+Secrets (admin_password, salt) are legacy placeholders retained only because
+utils.store prefixes redis keys with `salt`. They MUST be overridden in
+production via ADMIN_PASSWORD and SALT env vars; never rely on the defaults.
+"""
+
 import os
 
 import celery
 import redis
+from celery.result import AsyncResult  # noqa: F401  (re-exported by callers)
+from kombu import Exchange, Queue  # noqa: F401  (re-exported by callers)
 
-# from raven.contrib.celery import register_signal, register_logger_signal
-# from raven.handlers.logging import SentryHandler
-client = os
-# client = raven.Client('https://29b51be9165b4678a16d998c59141c10:e31e0e292ccf41c39251263cb318d202@sentry.appido.ir/6')
-# handler = SentryHandler(client)
+
+# --- Storage root and managed subdirectories -------------------------------
+STORAGE_ROOT = os.environ.get("STORAGE_ROOT", "/storage")
+
+
+def _absdir(path: str) -> str:
+    p = os.path.abspath(path)
+    os.makedirs(p, exist_ok=True)
+    return p
+
+
+work_folder_tmp = _absdir(os.path.join(STORAGE_ROOT, "video_tmp"))
+input_folder = work_folder_tmp  # historical alias
+out_folder = _absdir(os.path.join(STORAGE_ROOT, "streaming"))
+uploads_folder = _absdir(os.path.join(STORAGE_ROOT, "uploads"))
+
+
+# --- Bento4 / ffmpeg binaries ----------------------------------------------
+# Local default points at the vendored bento4 under revision/. Docker images
+# set BENTO4_PATH=/Bento4 (see Dockerfile.*).
+bento4_path = os.path.abspath(os.environ.get("BENTO4_PATH", "revision/bento4"))
+
+
+# --- Redis / Celery broker --------------------------------------------------
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
+REDIS_DB_BROKER = os.environ.get("REDIS_DB_BROKER", "10")
+REDIS_DB_BACKEND = os.environ.get("REDIS_DB_BACKEND", "11")
+
+BROKER_URL = os.environ.get(
+    "BROKER_URL", "redis://%s:%s/%s" % (REDIS_HOST, REDIS_PORT, REDIS_DB_BROKER)
+)
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND",
+    "redis://%s:%s/%s" % (REDIS_HOST, REDIS_PORT, REDIS_DB_BACKEND),
+)
+
+BROKER_TRANSPORT_OPTIONS = {"fanout_patterns": True, "fanout_prefix": True}
 
 
 class Celery(celery.Celery):
     def on_configure(self):
+        # Hook kept for any future logging/error-handler registration.
         pass
-        # register a custom filter to filter out duplicate logs
-        # register_logger_signal(client)
-        # hook into the Celery error handler
-        # register_signal(client)
 
-
-from celery import current_task
-from celery.result import AsyncResult
-from kombu import Exchange, Queue
-
-# import logging.handlers
-
-
-BROKER_TRANSPORT_OPTIONS = {"fanout_patterns": True, "fanout_prefix": True}
-REDIS_HOST = "redis"
-BROKER_URL = "redis://%s:6379/10" % REDIS_HOST
-CELERY_RESULT_BACKEND = "redis://%s:6379/11" % REDIS_HOST
 
 app = Celery("tasks", broker=BROKER_URL, backend=CELERY_RESULT_BACKEND)
 app.config_from_object("tasksConfig")
 
-REDIS = redis.StrictRedis(host=REDIS_HOST, port=6379)
 
-work_folder_tmp = os.path.abspath("/storage/video_tmp")
-input_folder = os.path.abspath("/storage/video_tmp")
-out_folder = os.path.abspath("/storage/streaming")
-uploads_folder = os.path.abspath("/storage/uploads")
+# Default Redis connection used by utils.store/restore/remove for ticket state.
+REDIS_DB_STATE = int(os.environ.get("REDIS_DB_STATE", "0"))
+REDIS = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_STATE)
 
-for each in [work_folder_tmp, input_folder, out_folder]:
-    if not os.path.isdir(each):
-        os.makedirs(each)
 
-bento4_path = os.path.abspath("/Bento4")
-admin_user = "root"
-admin_password = "why_321"
-salt = "Doo_5b9m"
+# --- Legacy / security ------------------------------------------------------
+# These values are placeholder defaults and MUST be overridden via env vars
+# in any non-local deployment. They are not committed secrets.
+admin_user = os.environ.get("ADMIN_USER", "root")
+admin_password = os.environ.get("ADMIN_PASSWORD", "why_321")
+salt = os.environ.get("SALT", "Doo_5b9m")
+
 TIME_FORMAT = "%d/%m/%y %H:%M:%S"
-
-# smtp_handler = logging.handlers.SMTPHandler(mailhost=("mail.rashavas.com", 587),
-#                                            fromaddr="no-reply@rashavas.com",
-#                                            toaddrs="ashouri@rashavas.com",
-#                                            credentials=('no-reply@rashavas.com','killMyCatPlease'),
-#                                            subject=u"Streaming Server Error!")
